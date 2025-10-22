@@ -94,11 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _saveThemePreference(String themeMode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('theme_mode', themeMode);
-  }
-
   @override
   Widget build(BuildContext context) {
     final bool isDark =
@@ -347,14 +342,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   withPullToRefresh(
                     ProfileTabContent(
                       textColor: textColor,
-                      cardColor: cardColor,
-                      themeMode: _themeMode,
-                      onThemeChanged: (String newThemeMode) async {
-                        setState(() {
-                          _themeMode = newThemeMode;
-                        });
-                        await _saveThemePreference(newThemeMode);
-                      },
                     ),
                     padding: const EdgeInsets.only(
                       bottom: 92,
