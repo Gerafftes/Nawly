@@ -1,0 +1,44 @@
+name: minijobnow
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_svg: ^2.0.10
+  shared_preferences: ^2.2.2
+  sensors_plus: ^7.0.0
+  flutter_native_splash: ^2.4.6
+  liquid_glass_renderer: ^0.1.1-dev.10
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/icons/wrench.and.screwdriver.svg
+    - assets/icons/add.svg
+    - assets/icons/plus.svg
+    - assets/icons/headset.svg
+    - assets/icons/list.bullet.rectangle.portrait.fill.svg
+    - assets/icons/logo.png
+    - assets/icons/branding.png
+    - assets/icons/verified.svg
+    - assets/icons/close.svg
+
+flutter_native_splash:
+  android: true
+  ios: true
+  web: false
+  color: "#0D0D0D"
+  image: "assets/icons/logo.png"
+  branding: "assets/icons/branding.png"

@@ -1,0 +1,9 @@
+.dart_tool/
+.packages
+build/
+.vscode/
+.idea/
+ios/Pods/
+**/*.xcuserdatad/
+**/*.xcscmblueprint
+.DS_Store
