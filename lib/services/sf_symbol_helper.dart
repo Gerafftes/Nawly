@@ -9,6 +9,7 @@ class SFSymbolHelper {
   /// Maps custom icon paths to SF Symbol names
   /// You can specify which SF Symbol to use for each custom icon
   static final Map<String, String> _iconToSFSymbolMap = {
+    'assets/icons/person.circle.svg': 'person.circle',
     'assets/icons/add.svg': 'plus',
     'assets/icons/verified.svg': 'lock.shield.fill',
     'assets/icons/close.svg': 'xmark',
@@ -37,6 +38,9 @@ class SFSymbolHelper {
           break;
         case 'wrench.and.screwdriver':
           iconData = CupertinoIcons.wrench;
+          break;
+        case 'person.circle':
+          iconData = CupertinoIcons.person_circle;
           break;
         default:
           iconData = CupertinoIcons.question_circle;
