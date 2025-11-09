@@ -30,6 +30,7 @@ flutter:
     - assets/icons/plus.svg
     - assets/icons/headset.svg
     - assets/icons/list.bullet.rectangle.portrait.fill.svg
+    - assets/icons/person.circle.svg
     - assets/icons/logo.png
     - assets/icons/branding.png
     - assets/icons/verified.svg
