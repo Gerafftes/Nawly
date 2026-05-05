@@ -1,4 +1,4 @@
-platform :ios, '13.0'
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -43,7 +43,28 @@ post_install do |installer|
 
     # iOS-Deployment-Target für alle Pods hochsetzen
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
+  end
+
+  # Ensure Flutter build settings are included when Runner uses Pods base configs.
+  %w[debug release profile].each do |config|
+    xcconfig_path = File.join(
+      __dir__,
+      'Pods',
+      'Target Support Files',
+      'Pods-Runner',
+      "Pods-Runner.#{config}.xcconfig"
+    )
+    next unless File.exist?(xcconfig_path)
+
+    include_line = '#include "../../../Flutter/Generated.xcconfig"'
+    xcconfig = File.read(xcconfig_path)
+    next if xcconfig.include?(include_line)
+
+    File.open(xcconfig_path, 'a') do |file|
+      file.puts
+      file.puts include_line
     end
   end
 end

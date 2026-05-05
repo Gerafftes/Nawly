@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MiniJobNow App Screens</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f3f4f6;
+      --ink: #101318;
+      --muted: #69707d;
+      --phone-bg: #020202;
+      --card: #0d0d0d;
+      --card-active: #1a1a1a;
+      --text: #f2f2f2;
+      --secondary: #b3b3b3;
+      --tertiary: #747474;
+      --divider: #1b1b1b;
+      --blue: #007aff;
+      --blue-soft: #00345f;
+      --green: #04c40a;
+      --red: #d6543d;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .hero {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 22px 34px;
+      background: rgba(243, 244, 246, 0.92);
+      border-bottom: 1px solid rgba(16, 19, 24, 0.08);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero h1 {
+      margin: 0 0 6px;
+      font-size: 24px;
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      max-width: 1120px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .warning {
+      display: inline-flex;
+      margin-top: 12px;
+      padding: 8px 10px;
+      border: 1px solid rgba(0, 122, 255, 0.22);
+      border-radius: 8px;
+      color: #0f4d89;
+      background: #e8f3ff;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(402px, 1fr));
+      gap: 52px 44px;
+      align-items: start;
+      padding: 42px 34px 72px;
+    }
+
+    .screen-card { width: 402px; }
+
+    .screen-meta {
+      min-height: 50px;
+      margin-bottom: 12px;
+    }
+
+    .screen-meta h2 {
+      margin: 0 0 4px;
+      font-size: 17px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .screen-meta p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .phone {
+      position: relative;
+      width: 402px;
+      height: 874px;
+      overflow: hidden;
+      color: var(--text);
+      background: var(--phone-bg);
+      border: 1px solid rgba(17, 24, 39, 0.15);
+      border-radius: 34px;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
+    }
+
+    .status {
+      position: absolute;
+      inset: 0 0 auto;
+      height: 44px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .time { position: absolute; left: 24px; top: 15px; }
+    .signal { position: absolute; right: 76px; top: 17px; width: 18px; height: 12px; border-radius: 3px; background: rgba(242, 242, 242, 0.82); }
+    .wifi { position: absolute; right: 48px; top: 18px; width: 19px; height: 10px; border-radius: 9px 9px 4px 4px; background: rgba(242, 242, 242, 0.82); }
+    .battery { position: absolute; right: 16px; top: 16px; width: 25px; height: 13px; border: 1px solid rgba(242, 242, 242, 0.75); border-radius: 4px; }
+    .battery::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 5px; border-radius: 2px; background: var(--text); }
+
+    .appbar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 44px;
+      height: 56px;
+    }
+
+    .app-title {
+      position: absolute;
+      inset: 8px 72px auto;
+      height: 34px;
+      overflow: hidden;
+      text-align: center;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 24px;
+      line-height: 34px;
+      font-weight: 800;
+    }
+
+    .detail-title { font-size: 20px; font-weight: 700; }
+    .icon-button {
+      position: absolute;
+      top: 8px;
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--card);
+      font-weight: 800;
+    }
+
+    .bell { left: 14px; }
+    .bell::after {
+      content: "";
+      position: absolute;
+      right: 2px;
+      top: 1px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff2121;
+    }
+
+    .back { left: 14px; background: transparent; font-size: 24px; }
+    .body { position: absolute; left: 0; right: 0; top: 100px; bottom: 85px; padding: 8px 16px 18px; overflow: hidden; }
+    .detail-body { bottom: 0; padding-top: 18px; }
+
+    .bottom-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 85px;
+      background: rgba(5, 5, 5, 0.91);
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .nav-item {
+      position: absolute;
+      top: 15px;
+      width: 134px;
+      text-align: center;
+      color: var(--secondary);
+      font-size: 11px;
+    }
+
+    .nav-item:nth-child(1) { left: 0; }
+    .nav-item:nth-child(2) { left: 134px; }
+    .nav-item:nth-child(3) { left: 268px; }
+    .nav-icon {
+      width: 24px;
+      height: 24px;
+      margin: 0 auto 6px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--card-active);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .nav-item.active { color: var(--blue); font-weight: 700; }
+    .nav-item.active .nav-icon { color: #fff; background: var(--blue); }
+    .nav-dot { position: absolute; right: 63px; top: 11px; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .action-card {
+      height: 107px;
+      display: grid;
+      place-items: center;
+      padding: 10px 8px;
+      border-radius: 15px;
+      background: var(--card);
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.16;
+    }
+
+    .action-card.active { background: var(--card-active); }
+    .action-symbol { margin-bottom: 8px; font-size: 26px; line-height: 1; }
+
+    .info-card {
+      padding: 15px;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      border-radius: 15px;
+      margin-bottom: 28px;
+    }
+
+    .info-card h3 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .info-card p {
+      margin: 0;
+      color: var(--secondary);
+      font-size: 15px;
+      line-height: 1.35;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 20px;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .section-row-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      padding: 0 9px;
+      border-radius: 999px;
+      color: #4daafc;
+      background: var(--blue-soft);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .job-list { display: grid; gap: 12px; }
+    .job-card {
+      height: 88px;
+      position: relative;
+      padding: 14px 18px;
+      border-radius: 15px;
+      background: var(--card);
+    }
+
+    .job-title { margin: 0 0 9px; font-size: 17px; font-weight: 800; }
+    .job-time { color: var(--secondary); font-size: 13.5px; font-weight: 700; }
+    .job-price { position: absolute; left: 18px; bottom: 10px; font-size: 16px; font-weight: 800; }
+    .verified + .job-price { left: 42px; }
+    .verified {
+      position: absolute;
+      left: 18px;
+      bottom: 14px;
+      width: 17px;
+      height: 17px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .job-button {
+      position: absolute;
+      right: 18px;
+      top: 22px;
+      width: 116px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--card-active);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .primary-button {
+      height: 60px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: var(--blue);
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .helper { margin: 8px 2px 18px; color: var(--secondary); font-size: 14px; }
+
+    .segmented {
+      height: 39px;
+      display: grid;
+      gap: 12px;
+      padding: 6px;
+      border-radius: 15px;
+      background: var(--card);
+    }
+
+    .segmented.two { grid-template-columns: 1fr 1fr; }
+    .segmented.three { grid-template-columns: repeat(3, 1fr); }
+    .segment {
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .segment.active { background: var(--card-active); }
+
+    .empty-card {
+      height: 112px;
+      margin-top: 20px;
+      padding: 17px 20px;
+      border-radius: 15px;
+      background: var(--card);
+      text-align: center;
+      color: var(--secondary);
+      font-size: 14px;
+    }
+
+    .empty-card strong {
+      display: block;
+      margin: 10px 0 4px;
+      color: var(--text);
+      font-size: 16px;
+    }
+
+    .filter-button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--card);
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .profile-header {
+      display: grid;
+      grid-template-columns: 65px 1fr;
+      gap: 19px;
+      align-items: start;
+      margin: -28px 0 28px;
+    }
+
+    .avatar {
+      width: 65px;
+      height: 65px;
+      display: grid;
+      place-items: center;
+      border-radius: 20px;
+      background: var(--card-active);
+      font-size: 30px;
+      font-weight: 800;
+    }
+
+    .profile-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 16px;
+      font-size: 30px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .rating {
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--card);
+      font-size: 12px;
+    }
+
+    .profile-count { color: var(--secondary); font-size: 17px; }
+
+    .list-card {
+      overflow: hidden;
+      border-radius: 15px;
+      background: var(--card);
+      margin-bottom: 14px;
+    }
+
+    .list-row {
+      position: relative;
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 16px;
+      border-bottom: 1px solid var(--divider);
+    }
+
+    .list-row:last-child { border-bottom: 0; }
+    .tile {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      background: #141414;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .row-main { min-width: 0; flex: 1; }
+    .row-title {
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      font-size: 17px;
+      font-weight: 750;
+    }
+
+    .row-sub {
+      margin-top: 4px;
+      color: var(--secondary);
+      font-size: 13.5px;
+      line-height: 1.25;
+      font-weight: 600;
+    }
+
+    .chevron { color: rgba(242, 242, 242, 0.7); font-size: 22px; }
+    .row-action {
+      width: 121px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--card-active);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .row-action.add { color: #4daafc; background: var(--blue-soft); }
+    .row-action.destructive { color: var(--red); background: #351614; }
+    .row-action.outline { border: 1px solid var(--red); }
+
+    .switch {
+      width: 50px;
+      height: 30px;
+      padding: 3px;
+      border-radius: 15px;
+      background: var(--card-active);
+      border: 1px solid #2c2c2e;
+    }
+
+    .switch.on { background: var(--blue); }
+    .switch::before {
+      content: "";
+      display: block;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .switch.on::before { transform: translateX(20px); }
+
+    .floating-info {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 108px;
+      min-height: 112px;
+      padding: 8px;
+      border-radius: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(17, 17, 17, 0.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .floating-info .close { position: absolute; top: 10px; right: 14px; color: var(--tertiary); font-weight: 900; }
+    .floating-info h4 { margin: 7px 0 2px; color: #bcbcbc; font-size: 15px; }
+    .floating-info p { margin: 0; color: var(--tertiary); font-size: 11.5px; line-height: 1.35; font-weight: 700; }
+    .small-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 23px;
+      min-width: 70px;
+      margin-top: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 7px;
+      background: var(--card-active);
+      color: var(--secondary);
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .overlay-dim {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.52);
+      z-index: 4;
+    }
+
+    .sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 5;
+      padding: 23px 24px 16px;
+      border-radius: 24px 24px 0 0;
+      background: var(--card);
+    }
+
+    .sheet h3 {
+      margin: 0;
+      text-align: center;
+      font-size: 30px;
+      line-height: 1.15;
+      font-weight: 700;
+    }
+
+    .sheet .subtitle {
+      margin: 0;
+      text-align: center;
+      color: var(--secondary);
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .field-label {
+      margin: 22px 0 5px;
+      color: var(--tertiary);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .field {
+      height: 60px;
+      padding: 18px;
+      border-radius: 15px;
+      background: #050505;
+      color: var(--tertiary);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .save-button {
+      height: 60px;
+      display: grid;
+      place-items: center;
+      margin-top: 22px;
+      border: 1px solid var(--blue);
+      border-radius: 15px;
+      background: var(--card-active);
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .skill-chips { display: flex; gap: 12px; margin: 28px 0; }
+    .skill-chip {
+      height: 36px;
+      min-width: 84px;
+      display: grid;
+      place-items: center;
+      padding: 0 12px;
+      border: 1px solid #333;
+      border-radius: 18px;
+      background: var(--card-active);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .progress-card {
+      position: relative;
+      height: 100px;
+      border-radius: 15px 50px 50px 15px;
+      background: var(--card);
+      padding: 25px;
+      margin-bottom: 12px;
+    }
+
+    .progress-ring {
+      position: absolute;
+      right: 17px;
+      top: 11px;
+      width: 77px;
+      height: 77px;
+      display: grid;
+      place-items: center;
+      border: 3px solid var(--secondary);
+      border-radius: 50%;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .pay-methods {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .pay-method {
+      width: 58px;
+      text-align: center;
+      color: #e6e6e6;
+      font-size: 11px;
+    }
+
+    .pay-circle {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 6px;
+      border-radius: 50%;
+      background: #fff;
+      color: #0d0d0d;
+      font-size: 22px;
+      font-weight: 900;
+    }
+
+    .pay-circle.selected { border: 3px solid var(--blue); }
+
+    .hint {
+      display: inline-flex;
+      margin: 0 0 16px;
+      padding: 7px 12px;
+      border-radius: 9px;
+      background: var(--card-active);
+      color: var(--secondary);
+      font-size: 12px;
+    }
+
+    .payout-card {
+      position: relative;
+      height: 204px;
+      padding: 16px;
+      border: 1px solid var(--blue);
+      border-radius: 18px;
+      background: var(--card-active);
+      z-index: 1;
+    }
+
+    .payout-title { font-size: 23px; font-weight: 700; }
+    .fee {
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      min-width: 98px;
+      height: 23px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--blue);
+      border-radius: 9px;
+      color: var(--blue);
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .amount {
+      position: absolute;
+      left: 16px;
+      bottom: 48px;
+      font-size: 25px;
+      font-weight: 800;
+    }
+
+    .status-line {
+      position: absolute;
+      left: 16px;
+      bottom: 18px;
+      color: var(--secondary);
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .payout-logo {
+      position: absolute;
+      right: 16px;
+      bottom: 20px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .payout-footer {
+      height: 93px;
+      margin-top: -20px;
+      padding: 30px 17px 12px;
+      display: grid;
+      grid-template-columns: 1fr 1.6fr auto;
+      gap: 18px;
+      border: 1px solid #373737;
+      border-radius: 0 0 20px 20px;
+      background: var(--card-active);
+      color: rgba(242, 242, 242, 0.55);
+      font-size: 12.5px;
+      font-weight: 700;
+    }
+
+    .payout-footer strong { display: block; margin-top: 4px; font-size: 20px; color: rgba(242, 242, 242, 0.55); }
+    .swipe {
+      position: relative;
+      height: 60px;
+      display: grid;
+      place-items: center;
+      margin-top: 26px;
+      border: 1px solid #ccc;
+      border-radius: 15px;
+      background: var(--blue-soft);
+      color: #4daafc;
+      font-weight: 800;
+    }
+
+    .swipe::before {
+      content: ">>";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 76px;
+      height: 60px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: #d9d9d9;
+      color: #1a1a1a;
+    }
+
+    .history-link { margin-top: 26px; color: var(--secondary); text-decoration: underline; font-size: 16px; }
+
+    .placeholder {
+      position: absolute;
+      left: 28px;
+      right: 28px;
+      top: 410px;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .shake-card {
+      position: absolute;
+      left: 101px;
+      top: 390px;
+      width: 200px;
+      height: 74px;
+      display: grid;
+      place-items: center;
+      z-index: 6;
+      border-radius: 16px;
+      background: #fff;
+      color: #111;
+      font-size: 24px;
+      font-weight: 900;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 520px) {
+      .hero { padding: 18px; }
+      .board { padding: 28px 14px 56px; grid-template-columns: 1fr; justify-items: center; }
+      .screen-card { width: min(402px, 100%); }
+      .phone { transform-origin: top center; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <h1>MiniJobNow App Screens</h1>
+    <p>Browser-Fallback für die Figma-Datei. Die Screens wurden aus der Flutter-Struktur in <code>lib/main.dart</code>, <code>lib/pages/start-tab</code>, <code>lib/pages/profile_tab.dart</code> und <code>lib/pages/profile_details</code> rekonstruiert.</p>
+    <div class="warning">Figma MCP ist aktuell durch das Starter-Plan-Limit blockiert. Diese lokale Ansicht zeigt die Screens sofort im Browser.</div>
+  </header>
+  <main id="board" class="board"></main>
+
+  <script>
+    const screens = [
+      ['Start - Ich helfe gern', 'lib/main.dart + lib/pages/start-tab/ich_helfe_gerne.dart', startHelp],
+      ['Start - Aufträge erstellen', 'lib/pages/start-tab/erstellen.dart', startCreateOpen],
+      ['Start - Aufträge abgeschlossen', 'lib/pages/start-tab/erstellen.dart', startCreateDone],
+      ['Start - Feste Dienstl.', 'lib/pages/start-tab/feste_angebote.dart', startServices],
+      ['Start - Filter', 'lib/pages/start-tab/ich_helfe_gerne.dart bottom sheet', startFilter],
+      ['Feedback', 'lib/pages/feedback_tab.dart', feedback],
+      ['Profil', 'lib/pages/profile_tab.dart', profile],
+      ['Notifications Hub', 'lib/main.dart bell placeholder', notificationHub],
+      ['Allgemein', 'lib/pages/profile_details/general_page.dart', general],
+      ['Allgemein - Anzeigename', 'general_page.dart display-name sheet', generalName],
+      ['Allgemein - Skills', 'general_page.dart skills sheet', generalSkills],
+      ['Benachrichtigungen', 'lib/pages/profile_details/notifications_page.dart', notifications],
+      ['Zahlungen & Auszahlungen', 'lib/pages/profile_details/payments_page.dart', payments],
+      ['Auszahlung bearbeiten', 'payments_page.dart payout edit sheet', payoutEdit],
+      ['Auszahlung', 'lib/pages/profile_details/payout_processing_page.dart', () => placeholder('Auszahlung', '')],
+      ['Auszahlungshistorie', 'lib/pages/profile_details/payout_history_page.dart', () => placeholder('Auszahlungshistorie')],
+      ['Verifizierung - Identität', 'verification_page.dart tab Identität', () => verification(0)],
+      ['Verifizierung - Kontakt', 'verification_page.dart tab Kontakt', () => verification(1)],
+      ['Verifizierung - Sicherheit', 'verification_page.dart tab Sicherheit', () => verification(2)],
+      ['Rechtliches', 'lib/pages/profile_details/legal_page.dart', () => placeholder('Rechtliches')],
+      ['Affiliate', 'lib/pages/profile_details/affiliate_page.dart', () => placeholder('Affiliate')],
+      ['Shake Overlay', 'lib/widgets/shake_overlay.dart', shakeOverlay],
+    ];
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;');
+    }
+
+    function status() {
+      return '<div class="status"><span class="time">9:41</span><span class="signal"></span><span class="wifi"></span><span class="battery"></span></div>';
+    }
+
+    function appbar(title, options = {}) {
+      const left = options.back ? '<div class="icon-button back">&lt;</div>' : options.bell ? '<div class="icon-button bell">!</div>' : '';
+      const detail = options.back ? ' detail-title' : '';
+      return `<div class="appbar">${left}<div class="app-title${detail}">${escapeHtml(title)}</div></div>`;
+    }
+
+    function bottomNav(active = 0) {
+      const items = [['Start', 'H'], ['Feedback', 'C'], ['Profil', 'P']];
+      return `<nav class="bottom-nav">${items.map((item, index) => `
+        <div class="nav-item ${index === active ? 'active' : ''}">
+          <div class="nav-icon">${item[1]}</div>
+          ${item[0]}
+        </div>`).join('')}<span class="nav-dot"></span></nav>`;
+    }
+
+    function phone(content, options = {}) {
+      return `<div class="phone">${status()}${appbar(options.title || 'MiniJobNow', options)}<section class="body ${options.detail ? 'detail-body' : ''}">${content}</section>${options.nav === false ? '' : bottomNav(options.nav || 0)}</div>`;
+    }
+
+    function appendOverlay(phoneHtml, overlayHtml) {
+      const closingPhoneTag = phoneHtml.lastIndexOf('</div>');
+      return `${phoneHtml.slice(0, closingPhoneTag)}${overlayHtml}${phoneHtml.slice(closingPhoneTag)}`;
+    }
+
+    function actions(active) {
+      const items = [['Ich helfe<br>gern', 'W'], ['Aufträge<br>erstellen', '+'], ['Feste<br>Dienstl.', 'L']];
+      return `<div class="action-row">${items.map((item, index) => `
+        <div class="action-card ${index === active ? 'active' : ''}">
+          <div><div class="action-symbol">${item[1]}</div><div>${item[0]}</div></div>
+        </div>`).join('')}</div>`;
+    }
+
+    function info(title, body) {
+      return `<div class="info-card"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body)}</p></div>`;
+    }
+
+    function job(title, time, price, button = 'Job annehmen', opts = {}) {
+      const line = opts.distance ? `${opts.distance} | ${time}` : time;
+      return `<article class="job-card">
+        <h4 class="job-title">${escapeHtml(title)}</h4>
+        <div class="job-time">${escapeHtml(line)}</div>
+        ${opts.verified ? '<span class="verified">✓</span>' : ''}
+        <div class="job-price">${escapeHtml(price)}</div>
+        <div class="job-button">${escapeHtml(button)}</div>
+      </article>`;
+    }
+
+    function segment(labels, active) {
+      return `<div class="segmented ${labels.length === 2 ? 'two' : 'three'}">${labels.map((label, index) => `<div class="segment ${index === active ? 'active' : ''}">${escapeHtml(label)}</div>`).join('')}</div>`;
+    }
+
+    function rows(items) {
+      return `<div class="list-card">${items.map(item => `
+        <div class="list-row">
+          <div class="tile">${escapeHtml(item.icon || item.title.charAt(0))}</div>
+          <div class="row-main">
+            <div class="row-title">${escapeHtml(item.title)}</div>
+            ${item.sub ? `<div class="row-sub">${escapeHtml(item.sub).replaceAll('\\n', '<br>')}</div>` : ''}
+          </div>
+          ${item.badge ? `<span class="badge">${escapeHtml(item.badge)}</span>` : ''}
+          ${item.action ? `<div class="row-action ${item.kind || ''}">${escapeHtml(item.action)}</div>` : ''}
+          ${item.switch !== undefined ? `<div class="switch ${item.switch ? 'on' : ''}"></div>` : ''}
+          ${item.chevron === false || item.action || item.switch !== undefined || item.badge ? '' : '<span class="chevron">&gt;</span>'}
+        </div>`).join('')}</div>`;
+    }
+
+    function startHelp() {
+      return phone(`${actions(0)}${info('Finde Jobs in deiner Nähe.', 'Übernimm Aufträge und verdiene flexibel Geld – vom Einkaufen bis zur Gartenarbeit.')}
+        <div style="position:relative"><h3 class="section-title">In deiner Nähe</h3><div class="filter-button">≡</div></div>
+        <div class="job-list">${job('Gassi gehen', 'Heute, 14:00', '10 €', 'Job annehmen', { distance: '1,2km', verified: true })}${job('Einkaufshilfe', 'Heute, 15:00', '12 €', 'Job annehmen', { distance: '0,8km', verified: true })}${job('Paket abholen', 'Heute, 16:30', '8 €', 'Job annehmen', { distance: '2,1km', verified: true })}</div>`, { bell: true });
+    }
+
+    function createBase(done) {
+      const content = `${actions(1)}${info('Was möchtest du erstellen?', 'Erstelle einen einmaligen Auftrag oder biete eine dauerhafte Dienstleistung an.')}
+        <div class="primary-button">+ Job erstellen</div><div class="helper">Erscheint in „Ich helfe gern“</div>
+        <div class="primary-button">+ Dienstleistung anbieten</div><div class="helper">Erscheint in „Feste Angebote“</div>
+        <h3 class="section-title">Deine Aufträge</h3>${segment(['Laufend', 'Abgeschlossen'], done ? 1 : 0)}
+        ${done ? '<div class="empty-card">↻<strong>Keine abgeschlossenen Aufträge</strong>Hier werden deine abgeschlossenen Aufträge angezeigt</div>' : `<div class="job-list" style="margin-top:16px">${job('Gassi gehen', 'Heute, 14:00', '10 €', 'Cancel', { distance: '1,2km' })}${job('Einkaufshilfe', 'Heute, 15:00', '12 €', 'Cancel', { distance: '0,8km' })}</div>`}`;
+      return phone(content, { bell: true });
+    }
+
+    function startCreateOpen() { return createBase(false); }
+    function startCreateDone() { return createBase(true); }
+
+    function startServices() {
+      return phone(`${actions(2)}${info('Dienste direkt buchen.', 'Finde dauerhafte Dienstleistungen in deiner Nähe und kontaktiere die Anbieter:innen direkt – ohne selbst einen Auftrag einstellen zu müssen.')}
+        <h3 class="section-title">In deiner Nähe</h3><div class="job-list">${job('Haushaltshilfe', 'Heute zwischen 15-18 Uhr', '15 €/Std', 'Buchen')}${job('Gartenpflege', 'Morgen zwischen 15-18 Uhr', '25 €/Std', 'Buchen')}${job('Nachhilfe', 'Mo/Di/Fr 13-14 Uhr', '20 €/Std', 'Buchen')}</div>`, { bell: true });
+    }
+
+    function startFilter() {
+      return appendOverlay(startHelp(), `<div class="overlay-dim"></div><div class="sheet" style="height:480px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="font-size:20px;text-align:left">Filter</h3><strong style="color:var(--blue)">Speichern</strong></div>
+        <h4 class="field-label" style="color:#fff">Distanz</h4><div style="display:flex;align-items:center;gap:14px"><div style="height:5px;flex:1;border-radius:3px;background:linear-gradient(90deg,var(--blue) 36%,#3a3a3c 36%)"></div><strong>5 km</strong></div>
+        <h4 class="field-label" style="color:#fff">Kategorie</h4><div class="field" style="display:flex;justify-content:space-between;color:#fff">Alle <span>⌄</span></div>
+        <h4 class="field-label" style="color:#fff">Sortieren von</h4>${segment(['Neu zu Alt','Alt zu Neu'],0)}
+      </div>`);
+    }
+
+    function feedback() { return phone('<div class="placeholder" style="top:313px;font-size:24px;font-weight:800">Feedback</div>', { bell: true, nav: 1 }); }
+    function notificationHub() { return phone('<div class="placeholder" style="top:313px;font-size:24px;font-weight:800">Notifications</div>', { bell: true, nav: 0 }); }
+
+    function profile() {
+      return phone(`<div class="profile-header"><div class="avatar">G</div><div><h3 class="profile-name">Gerafftes <span class="rating">5.0</span></h3><div class="profile-count">5 Abgeschlossene Aufträge</div></div></div>
+        ${rows([{ title: 'Allgemein', icon: 'A' }, { title: 'Benachrichtigungen', icon: 'B', chevron: false }, { title: 'Zahlungen & Auszahlungen', icon: 'Z' }, { title: 'Verifizierung', icon: 'V' }])}
+        ${rows([{ title: 'Rechtliches', icon: 'R', chevron: false }, { title: 'Affiliate', icon: 'G', chevron: false }])}
+        <div class="floating-info"><span class="badge">Wichtig</span><span class="close">x</span><h4>Verifiziere deinen Account</h4><p>Verifiziere bitte deine Email und deine<br>Telefonnummer um loszulegen.</p><span class="small-button">Jetzt ↗</span></div>`, { title: '', nav: 2 });
+    }
+
+    function generalContent() {
+      return `<h3 class="section-title">Profil</h3>${rows([{ title: 'Anzeigename', sub: 'Anzeigename eingeben', icon: 'P', action: 'Hinzufügen', kind: 'add' }, { title: 'Skills', sub: 'Skills hinzufügen', icon: 'S', action: 'Hinzufügen', kind: 'add' }])}
+        <h3 class="section-title">App</h3>${rows([{ title: 'Sprache', sub: 'Deutsch', icon: 'D' }, { title: 'Design', sub: 'System', icon: 'S' }, { title: 'Standort', sub: 'Verwalten', icon: 'O' }])}
+        <h3 class="section-title">Account</h3>${rows([{ title: 'Abmelden', sub: 'Melde dich auf diesem Gerät\\nvon deinem Konto ab.', icon: 'A', action: 'Abmelden', kind: 'destructive' }, { title: 'Löschen', sub: 'Dein Konto und deine Daten\\nwerden dauerhaft entfernt.', icon: 'L', action: 'Löschen', kind: 'destructive outline' }])}`;
+    }
+
+    function general() { return phone(generalContent(), { title: 'Allgemein', back: true, detail: true, nav: false }); }
+
+    function generalName() {
+      return appendOverlay(general(), `<div class="overlay-dim"></div><div class="sheet" style="height:324px"><h3>Anzeigename hinzufügen</h3><p class="subtitle">Dieser Name ist öffentlich sichtbar</p><div class="field-label">Anzeigename eingeben</div><div class="field">Gerafftes</div><div class="save-button">Speichern</div></div>`);
+    }
+
+    function generalSkills() {
+      return appendOverlay(general(), `<div class="overlay-dim"></div><div class="sheet" style="height:445px"><h3>Skills</h3><p class="subtitle">Skills werden in deinem Profil angezeigt</p><div class="field-label">Skills hinzufügen</div><div class="field">Nachhilfe</div><div class="skill-chips"><span class="skill-chip">Garten...</span><span class="skill-chip">Umzugs...</span><span class="skill-chip">WLAN ein...</span></div><div class="primary-button" style="background:var(--blue-soft);color:#a0a0a0">Hinzufügen</div><div class="save-button">Speichern</div></div>`);
+    }
+
+    function notifications() {
+      const content = `<div class="section-row-title"><h3 class="section-title" style="margin:0">Aktivität</h3></div>${rows([{ title: 'Jobangebote', sub: 'Anfragen, Änderungen und\\nBestätigungen', icon: 'J', switch: false }, { title: 'Nachrichten', sub: 'Benachrichtigungen zu neuen\\nChat-Nachrichten.', icon: 'N', switch: false }])}
+        <div class="section-row-title"><h3 class="section-title" style="margin:0">Wichtige Hinweise</h3><span class="badge">Empfohlen</span></div>${rows([{ title: 'Zahlungen & Auszahlungen', sub: 'Eingänge, Auszahlungen und\\nProbleme mit Auszahlungen.', icon: 'Z', switch: false }, { title: 'Sicherheitswarnungen', sub: 'Neue Logins und Änderungen an\\nKonto oder Finanzen.', icon: 'S', switch: false }])}
+        <div class="floating-info"><span class="badge">Hinweis</span><span class="close">x</span><h4>Wichtige Benachrichtigungen</h4><p>Sicherheits- und Zahlungsinfos helfen dir, keine wichtigen Änderungen zu verpassen.</p></div>`;
+      return phone(content, { title: 'Benachrichtigungen', back: true, detail: true, nav: false });
+    }
+
+    function payments() {
+      const content = `<h3 class="section-title">Zahlungen</h3><div class="pay-methods"><div class="pay-method"><div class="pay-circle">+</div>Hinzufügen</div><div class="pay-method"><div class="pay-circle selected">P</div>PayPal</div><div class="pay-method"><div class="pay-circle">A</div>Apple Pay</div></div>
+        <span class="hint">Gedrückt halten, um als Standard festzulegen</span><h3 class="section-title">Auszahlungen</h3>${segment(['PayPal','Visa','Gutschein'],0)}
+        <div style="margin-top:17px"><div class="payout-card"><div class="payout-title">Johann Eugen Mün...</div><div class="fee">Gebühr 0%</div><div class="amount">300,00 €</div><div class="status-line">✓ Bereit zur Auszahlung</div><div class="payout-logo">PayPal</div></div><div class="payout-footer"><div>Mindestbetrag<strong>25,00 €</strong></div><div>Nächste Auszahlung<strong>Auswählen</strong></div><div>✎</div></div></div><div class="swipe">Wischen zum Auszahlen</div><div class="history-link">Auszahlungshistorie ansehen</div>`;
+      return phone(content, { title: 'Zahlungen & Auszahlungen', back: true, detail: true, nav: false });
+    }
+
+    function payoutEdit() {
+      return appendOverlay(payments(), `<div class="overlay-dim"></div><div class="sheet" style="height:486px"><h3>Auszahlung bearbeiten</h3><p class="subtitle">PayPal</p><h4 class="field-label" style="color:#fff">Auszahlungsart</h4>${segment(['Automatisch','Manuell'],0)}<p class="helper">Die Auszahlung erfolgt einmal pro Monat automatisch.</p><h4 class="field-label" style="color:#fff">Automatische-Auszahlung</h4><div class="list-card"><div class="list-row"><span style="width:15px;height:15px;border:1px solid var(--secondary);border-radius:50%"></span><div class="row-main"><div class="row-title">PayPal automatisch auszahlen</div><div class="row-sub">Wird jeden Monat automatisch ausgezahlt</div></div></div></div><div class="save-button">Speichern</div></div>`);
+    }
+
+    function verification(tab) {
+      const sets = [
+        [{ title: 'Name' }, { title: 'Adresse' }, { title: 'Ausweis' }],
+        [{ title: 'E-Mail-Adresse' }, { title: 'Telefonnummer' }],
+        [{ title: '2FA' }]
+      ];
+      const content = `<div class="progress-card"><div style="color:var(--secondary);font-weight:700">Fortschritt</div><div style="margin-top:5px;font-weight:700">0 von 6 abgeschlossen</div><div class="progress-ring">0%</div></div><div style="height:1px;background:var(--divider);margin-bottom:14px"></div>${segment(['Identität','Kontakt','Sicherheit'],tab)}
+        <div style="margin-top:20px">${rows(sets[tab].map(item => ({ title: item.title, sub: 'Noch nicht eingerichtet\\nPrivat', icon: 'V', action: 'Verifizieren', kind: 'add' })))}</div>
+        <div class="floating-info"><span class="badge">Wichtig</span><span class="close">x</span><h4>Hinweis zur Verifizierung</h4><p>Verifizierungsdetails siehst nur du. Andere sehen nur<br>deinen Status. Mehr in der Datenschutzerklärung.</p></div>`;
+      return phone(content, { title: 'Verifizierung', back: true, detail: true, nav: false });
+    }
+
+    function placeholder(title, body = 'Diese Seite wird bald verfügbar sein.') {
+      return phone(`<div class="placeholder">${escapeHtml(body)}</div>`, { title, back: true, detail: true, nav: false });
+    }
+
+    function shakeOverlay() {
+      return appendOverlay(startHelp(), '<div class="overlay-dim"></div><div class="shake-card">Geschüttelt!</div>');
+    }
+
+    const board = document.getElementById('board');
+    board.innerHTML = screens.map(([title, source, render]) => `
+      <article class="screen-card">
+        <div class="screen-meta"><h2>${escapeHtml(title)}</h2><p>${escapeHtml(source)}</p></div>
+        ${render()}
+      </article>`).join('');
+  </script>
+</body>
+</html>

@@ -1,26 +1,31 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter/services.dart';
-import 'package:liquid_glass_renderer/liquid_glass_renderer.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'pages/start-tab/ich_helfe_gerne.dart';
-import 'pages/start-tab/erstellen.dart';
-import 'pages/start-tab/feste_angebote.dart';
-import 'pages/profile_tab.dart';
-import 'pages/support_tab.dart';
+import 'pages/tabs/start/jobs_find_content.dart';
+import 'pages/tabs/create_tab.dart';
+import 'pages/tabs/start/services_content.dart';
+import 'pages/tabs/activity_tab.dart';
+import 'pages/profile_details/profile_detail_page_utils.dart';
+import 'pages/profile_details/profile_detail_prewarm.dart';
+import 'pages/tabs/profile_tab.dart';
+import 'pages/profile_details/verification_page.dart';
 import 'widgets/home_action_button.dart';
 import 'widgets/shake_overlay.dart';
+import 'liquid_glass/liquid_glass.dart';
 import 'services/shake_detector.dart';
 import 'services/sf_symbol_helper.dart';
+import 'services/ui_scale.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setPreferredOrientations([
+  await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
-  ]).then((_) {
-    runApp(const MyApp());
-  });
+  ]);
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -31,6 +36,19 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'MiniJobNow',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: const TextScaler.linear(1.0)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
+      supportedLocales: const [Locale('de'), Locale('en'), Locale('fr')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007AFF)),
         useMaterial3: true,
@@ -48,18 +66,39 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const int _startTabIndex = 0;
+  static const int _activityTabIndex = 1;
+  static const int _profileTabIndex = 2;
+  static const int _createTabIndex = 3;
+  static const int _notificationsTabIndex = 4;
+  static const Duration _tabFadeInDuration = Duration(milliseconds: 250);
+  static const Duration _tabFadeOutDuration = Duration(milliseconds: 250);
+  static const Duration _startTabProfileWarmupDelay = Duration(seconds: 4);
+  static const Duration _startTabProfileWarmupGap = Duration(milliseconds: 700);
+  static const Duration _warmupUnmountDelay = Duration(milliseconds: 16);
+
   int selectedIndex = 0;
   int _bottomNavIndex = 0;
   int _mainTabIndex = 0;
-  String _themeMode = 'auto'; // 'light', 'auto', 'dark'
+  String _themeMode = 'auto';
   bool _showShakeOverlay = false;
+  bool _showProfileInfoBox = true;
   ShakeDetector? _shakeDetector;
+  Timer? _profileWarmupTimer;
+  ProfileDetailPrewarmTarget? _activeProfileWarmupTarget;
+  bool _hasQueuedProfileWarmupIconPrecache = false;
 
   @override
   void initState() {
     super.initState();
     _loadThemePreference();
     _initializeShakeDetector();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      _syncDelayedProfileWarmup();
+    });
   }
 
   void _initializeShakeDetector() {
@@ -83,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _profileWarmupTimer?.cancel();
     _shakeDetector = null;
     super.dispose();
   }
@@ -94,49 +134,122 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _saveThemePreference(String themeMode) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('theme_mode', themeMode);
+  void _pushWithFade(Widget page) {
+    Navigator.of(context).push(
+      buildProfileDetailFadeRoute<void>(
+        page: page,
+        transitionDuration: const Duration(milliseconds: 280),
+        reverseTransitionDuration: const Duration(milliseconds: 280),
+      ),
+    );
+  }
+
+  void _syncDelayedProfileWarmup({
+    Duration delay = _startTabProfileWarmupDelay,
+  }) {
+    _profileWarmupTimer?.cancel();
+    _profileWarmupTimer = null;
+
+    if (_bottomNavIndex != _startTabIndex ||
+        _activeProfileWarmupTarget != null) {
+      return;
+    }
+
+    if (nextPendingProfileDetailWarmupTarget() == null) {
+      return;
+    }
+
+    _profileWarmupTimer = Timer(delay, () {
+      if (!mounted ||
+          _bottomNavIndex != _startTabIndex ||
+          _activeProfileWarmupTarget != null) {
+        return;
+      }
+
+      final ProfileDetailPrewarmTarget? target =
+          nextPendingProfileDetailWarmupTarget();
+      if (target == null) {
+        return;
+      }
+
+      if (!_hasQueuedProfileWarmupIconPrecache) {
+        _hasQueuedProfileWarmupIconPrecache = true;
+        unawaited(precacheProfileDetailWarmupIcons(context));
+      }
+
+      setState(() {
+        _activeProfileWarmupTarget = target;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future<void>.delayed(_warmupUnmountDelay, () {
+          if (!mounted) {
+            return;
+          }
+          setState(() {
+            _activeProfileWarmupTarget = null;
+          });
+          _syncDelayedProfileWarmup(delay: _startTabProfileWarmupGap);
+        });
+      });
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool isDark =
-        _themeMode == 'auto'
-            ? MediaQuery.of(context).platformBrightness == Brightness.dark
-            : _themeMode == 'dark';
-    final Color bgColor = isDark ? Colors.black : const Color(0xFFE6E6E6);
-    final Color cardColor =
-        isDark
-            ? const Color(0xFF0D0D0D)
-            : const Color(0xFFF2F2F2); // Nicht ausgewählt
-    final Color cardColorActive =
-        isDark ? const Color(0xFF1A1A1A) : Colors.white; // Ausgewählt
-    final Color borderColor =
-        isDark
-            ? const Color.fromRGBO(255, 255, 255, 0.18)
-            : const Color(0xFFCCCCCC);
-    final Color secondaryText =
-        isDark
-            ? const Color.fromRGBO(255, 255, 255, 0.7)
-            : const Color.fromRGBO(13, 13, 13, 0.7);
+    final bool isDark = _themeMode == 'auto'
+        ? MediaQuery.of(context).platformBrightness == Brightness.dark
+        : _themeMode == 'dark';
+    final EdgeInsets viewPadding = MediaQuery.of(context).padding;
+    final double topBarInset = viewPadding.top + kToolbarHeight;
+    final ui = UiScale.of(context, designWidth: 402);
+    double s(double value) => ui.s(value);
+    final double profileHeaderTopInset = (((kToolbarHeight - s(28)) / 2) - s(2))
+        .clamp(0.0, kToolbarHeight)
+        .toDouble();
+    final double safeBottom = viewPadding.bottom;
+    final double bottomInset = safeBottom > s(4) ? safeBottom : s(4);
+    final double bottomNavHeight = s(64);
+    final double profileBottomGap = s(19);
+    final double profileBottomBoxHeight = s(116);
+    final Color bgColor = isDark
+        ? const Color(0xFF020202)
+        : const Color(0xFFE6E6E6);
+    final Color cardColor = isDark
+        ? const Color(0xFF0D0D0D)
+        : const Color(0xFFF2F2F2);
+    final Color cardColorActive = isDark
+        ? const Color(0xFF1A1A1A)
+        : Colors.white;
+    final Color borderColor = isDark
+        ? const Color.fromRGBO(255, 255, 255, 0.18)
+        : const Color(0xFFCCCCCC);
+    final Color secondaryText = isDark
+        ? const Color.fromRGBO(255, 255, 255, 0.7)
+        : const Color.fromRGBO(13, 13, 13, 0.7);
     final Color jobCardColor = isDark ? cardColor : const Color(0xFFF2F2F2);
-    final Color jobButtonColor =
-        isDark ? const Color(0xFF1A1A1A) : Colors.white;
-    final Color textColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
-    final Color timeTextColor =
-        isDark ? const Color(0xFFB3B3B3) : const Color(0xFF4D4D4D);
+    final Color jobButtonColor = isDark
+        ? const Color(0xFF1A1A1A)
+        : Colors.white;
+    final Color textColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+    final Color timeTextColor = isDark
+        ? const Color(0xFFB3B3B3)
+        : const Color(0xFF4D4D4D);
     final Color bellIconColor = isDark ? Colors.white : const Color(0xFF0D0D0D);
-    final Color homeActionIconColor =
-        isDark ? Colors.white : const Color(0xFF1A1A1A);
-    final Color buttonTextColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
+    final Color buttonTextColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+    final SystemUiOverlayStyle overlayStyle = isDark
+        ? SystemUiOverlayStyle.light
+        : SystemUiOverlayStyle.dark;
+    final bool showAppBarChrome = _bottomNavIndex != _profileTabIndex;
 
     Widget content;
     switch (selectedIndex) {
       case 0:
-        content = IchHelfeGerneContent(
+        content = JobsFindContent(
           cardColor: cardColor,
           secondaryText: secondaryText,
           borderColor: borderColor,
@@ -150,19 +263,7 @@ class _HomeScreenState extends State<HomeScreen> {
         );
         break;
       case 1:
-        content = HilfeSuchenContent(
-          cardColor: cardColor,
-          secondaryText: secondaryText,
-          borderColor: borderColor,
-          textColor: textColor,
-          jobCardColor: jobCardColor,
-          jobButtonColor: jobButtonColor,
-          timeTextColor: timeTextColor,
-          buttonTextColor: buttonTextColor,
-        );
-        break;
-      case 2:
-        content = IchBieteAnContent(
+        content = ServicesContent(
           cardColor: cardColor,
           secondaryText: secondaryText,
           borderColor: borderColor,
@@ -177,8 +278,22 @@ class _HomeScreenState extends State<HomeScreen> {
         content = const SizedBox();
     }
 
+    Widget buildCreateContent() {
+      return CreateTabContent(
+        cardColor: cardColor,
+        secondaryText: secondaryText,
+        borderColor: borderColor,
+        textColor: textColor,
+        jobCardColor: jobCardColor,
+        jobButtonColor: jobButtonColor,
+        timeTextColor: timeTextColor,
+        buttonTextColor: buttonTextColor,
+      );
+    }
+
     Widget withPullToRefresh(Widget child, {EdgeInsetsGeometry? padding}) {
       final Widget scrollable = SingleChildScrollView(
+        primary: false,
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
@@ -186,335 +301,615 @@ class _HomeScreenState extends State<HomeScreen> {
         child: child,
       );
 
-      // Keep the organic stretch/bounce, but remove the spinner animation
-      // by omitting RefreshIndicator.
       return StretchingOverscrollIndicator(
         axisDirection: AxisDirection.down,
         child: scrollable,
       );
     }
 
-    return Theme(
-      data: Theme.of(context).copyWith(
-        textTheme: Theme.of(context).textTheme.apply(fontFamily: 'SF Pro'),
-      ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 500),
-        color: bgColor,
-        child: Scaffold(
-          backgroundColor: bgColor,
-          extendBody: true,
-          appBar: _bottomNavIndex == 2
-              ? null
-              : AppBar(
-                  backgroundColor: bgColor,
-                  elevation: 0,
-                  leading: IconButton(
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Icon(
-                          Icons.notifications_none,
-                          color: bellIconColor,
-                          size: 28,
-                        ),
-                        Positioned(
-                          top: -2,
-                          right: -2,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFF2121),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    onPressed: () => setState(() => _bottomNavIndex = 3),
-                  ),
-                  title: Text(
-                    'MiniJobNow',
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 28,
-                    ),
-                  ),
-                  centerTitle: true,
-                  actions: [
-                    GestureDetector(
-                      onTap: () => setState(() => _bottomNavIndex = 2),
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: CircleAvatar(
-                          backgroundColor: cardColor,
-                          radius: 20,
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 26,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-          body: Stack(
-            children: [
-              IndexedStack(
-                index: _bottomNavIndex,
+    Widget buildTab(int index) {
+      switch (index) {
+        case _startTabIndex:
+          return withPullToRefresh(
+            Padding(
+              padding: EdgeInsets.only(
+                top: topBarInset,
+                bottom: s(92),
+                left: s(16),
+                right: s(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  withPullToRefresh(
-                    Padding(
-                      padding: const EdgeInsets.only(
-                        bottom: 92,
-                        left: 16.0,
-                        right: 16.0,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      HomeActionButton(
+                        iconPath:
+                            'assets/icons/wrench.and.screwdriver.fill.svg',
+                        label: 'Jobs finden',
+                        color: selectedIndex == 0 ? cardColorActive : cardColor,
+                        onTap: () => setState(() => selectedIndex = 0),
+                        isSelected: selectedIndex == 0,
+                        textColor: textColor,
+                        iconColor: isDark
+                            ? const Color(0xFFEBEBEB)
+                            : const Color(0xFF1A1A1A),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 16),
-                          // Drei große Buttons
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              HomeActionButton(
-                                iconPath: 'assets/icons/wrench.and.screwdriver.svg',
-                                label: 'Ich helfe\ngern',
-                                color:
-                                    selectedIndex == 0
-                                        ? cardColorActive
-                                        : cardColor,
-                                onTap: () => setState(() => selectedIndex = 0),
-                                isSelected: selectedIndex == 0,
-                                textColor: textColor,
-                                iconColor:
-                                    isDark
-                                        ? const Color(0xFFEBEBEB)
-                                        : const Color(0xFF1A1A1A),
-                              ),
-                              HomeActionButton(
-                                iconPath: 'assets/icons/plus.svg',
-                                label: 'Aufträge\nerstellen',
-                                color:
-                                    selectedIndex == 1
-                                        ? cardColorActive
-                                        : cardColor,
-                                onTap: () => setState(() => selectedIndex = 1),
-                                isSelected: selectedIndex == 1,
-                                textColor: textColor,
-                                iconColor:
-                                    isDark
-                                        ? const Color(0xFFEBEBEB)
-                                        : const Color(0xFF1A1A1A),
-                              ),
-                              HomeActionButton(
-                                iconPath: 'assets/icons/list.bullet.rectangle.portrait.fill.svg',
-                                label: 'Feste\nDienstl.',
-                                color:
-                                    selectedIndex == 2
-                                        ? cardColorActive
-                                        : cardColor,
-                                onTap: () => setState(() => selectedIndex = 2),
-                                isSelected: selectedIndex == 2,
-                                textColor: textColor,
-                                iconColor:
-                                    isDark
-                                        ? const Color(0xFFEBEBEB)
-                                        : const Color(0xFF1A1A1A),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 28),
-                          content,
-                          const SizedBox(height: 24),
-                        ],
+                      SizedBox(width: s(12)),
+                      HomeActionButton(
+                        iconPath:
+                            'assets/icons/list.bullet.rectangle.portrait.fill.svg',
+                        label: 'Services',
+                        color: selectedIndex == 1 ? cardColorActive : cardColor,
+                        onTap: () => setState(() => selectedIndex = 1),
+                        isSelected: selectedIndex == 1,
+                        textColor: textColor,
+                        iconColor: isDark
+                            ? const Color(0xFFEBEBEB)
+                            : const Color(0xFF1A1A1A),
                       ),
-                    ),
-                    padding: EdgeInsets.zero,
+                    ],
                   ),
-                  withPullToRefresh(
-                    const SupportTabContent(),
-                    padding: const EdgeInsets.only(
-                      bottom: 92,
-                      left: 16.0,
-                      right: 16.0,
-                    ),
-                  ),
-                  withPullToRefresh(
-                    ProfileTabContent(
-                      textColor: textColor,
-                      cardColor: cardColor,
-                      themeMode: _themeMode,
-                      onThemeChanged: (String newThemeMode) async {
-                        setState(() {
-                          _themeMode = newThemeMode;
-                        });
-                        await _saveThemePreference(newThemeMode);
-                      },
-                    ),
-                    padding: const EdgeInsets.only(
-                      bottom: 92,
-                      left: 16.0,
-                      right: 16.0,
-                    ),
-                  ),
-                  Center(
-                    child: Text(
-                      'Notifications',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+                  SizedBox(height: s(28)),
+                  AnimatedSwitcher(
+                    duration: _tabFadeInDuration,
+                    reverseDuration: _tabFadeOutDuration,
+                    switchInCurve: Curves.easeIn,
+                    switchOutCurve: Curves.easeOut,
+                    layoutBuilder: (currentChild, previousChildren) {
+                      return Stack(
+                        alignment: Alignment.topCenter,
+                        children: [...previousChildren, ?currentChild],
+                      );
+                    },
+                    transitionBuilder: (child, animation) => FadeTransition(
+                      opacity: CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeInOut,
                       ),
+                      child: child,
+                    ),
+                    child: KeyedSubtree(
+                      key: ValueKey<int>(selectedIndex),
+                      child: content,
                     ),
                   ),
+                  SizedBox(height: s(24)),
                 ],
               ),
-              ShakeOverlay(
-                isVisible: _showShakeOverlay,
-                onDismiss: _dismissShakeOverlay,
+            ),
+            padding: EdgeInsets.zero,
+          );
+        case _activityTabIndex:
+          return withPullToRefresh(
+            ActivityTabContent(
+              cardColor: cardColor,
+              textColor: textColor,
+              secondaryTextColor: secondaryText,
+              jobCardColor: jobCardColor,
+              jobButtonColor: jobButtonColor,
+              timeTextColor: timeTextColor,
+              buttonTextColor: buttonTextColor,
+            ),
+            padding: EdgeInsets.only(
+              top: topBarInset,
+              bottom: s(92),
+              left: s(16),
+              right: s(16),
+            ),
+          );
+        case _profileTabIndex:
+          final double profileBottomExtra = _showProfileInfoBox
+              ? profileBottomGap + profileBottomBoxHeight
+              : 0;
+          return Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                  top: viewPadding.top,
+                  left: s(16),
+                  right: s(16),
+                ),
+                child: SizedBox.expand(
+                  child: RepaintBoundary(
+                    child: ProfileTabContent(
+                      textColor: textColor,
+                      headerTopInset: profileHeaderTopInset,
+                      isDark: isDark,
+                      scrollBottomPadding:
+                          bottomNavHeight + bottomInset + profileBottomExtra,
+                      onOpenDetailPage: _pushWithFade,
+                    ),
+                  ),
+                ),
               ),
+              if (_showProfileInfoBox)
+                Positioned(
+                  left: viewPadding.left + s(16),
+                  right: viewPadding.right + s(16),
+                  bottom: bottomNavHeight + bottomInset + profileBottomGap,
+                  child: RepaintBoundary(
+                    child: _ProfileVerificationInfoBox(
+                      isDark: isDark,
+                      useGlassEffects: true,
+                      s: s,
+                      onDismiss: () {
+                        setState(() {
+                          _showProfileInfoBox = false;
+                        });
+                      },
+                      onVerifyNow: () {
+                        _pushWithFade(VerificationPage(isDarkOverride: isDark));
+                      },
+                    ),
+                  ),
+                ),
             ],
+          );
+        case _createTabIndex:
+          return withPullToRefresh(
+            buildCreateContent(),
+            padding: EdgeInsets.only(
+              top: topBarInset,
+              bottom: s(92),
+              left: s(16),
+              right: s(16),
+            ),
+          );
+        case _notificationsTabIndex:
+          return Center(
+            child: Text(
+              'Notifications',
+              style: TextStyle(
+                color: textColor,
+                fontSize: s(24),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          );
+        default:
+          return const SizedBox.shrink();
+      }
+    }
+
+    final scaffold = Scaffold(
+      backgroundColor: bgColor,
+      extendBody: true,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        systemOverlayStyle: overlayStyle,
+        flexibleSpace: IgnorePointer(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween<double>(end: showAppBarChrome ? 1 : 0),
+            duration: showAppBarChrome
+                ? _tabFadeInDuration
+                : _tabFadeOutDuration,
+            curve: Curves.easeInOut,
+            builder: (context, opacity, child) {
+              return ColoredBox(color: bgColor.withValues(alpha: opacity));
+            },
           ),
-          bottomNavigationBar: SafeArea(
-            minimum: const EdgeInsets.only(bottom: 4),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(36),
-                child: SizedBox(
-                  height: 64,
-                  child: Stack(
-                    fit: StackFit.expand,
+        ),
+        leadingWidth: s(56),
+        leading: AnimatedSwitcher(
+          duration: _tabFadeInDuration,
+          reverseDuration: _tabFadeOutDuration,
+          switchInCurve: Curves.easeIn,
+          switchOutCurve: Curves.easeOut,
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [...previousChildren, ?currentChild],
+            );
+          },
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+            child: child,
+          ),
+          child:
+              _bottomNavIndex == _activityTabIndex ||
+                  _bottomNavIndex == _profileTabIndex
+              ? const SizedBox(key: ValueKey<String>('appbar-no-bell'))
+              : IconButton(
+                  key: const ValueKey<String>('appbar-bell'),
+                  icon: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 2, sigmaY: 2),
-                        child: const SizedBox(),
+                      Icon(
+                        Icons.notifications_none,
+                        color: bellIconColor,
+                        size: s(28),
                       ),
-                      LiquidGlass(
-                        clipBehavior: Clip.antiAlias,
-                        shape: const LiquidRoundedSuperellipse(
-                          borderRadius: Radius.circular(36),
-                        ),
-                        glassContainsChild: false,
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            canvasColor: Colors.transparent,
-                            splashColor: Colors.transparent,
-                            highlightColor: Colors.transparent,
-                            bottomNavigationBarTheme:
-                                BottomNavigationBarThemeData(
-                                  selectedItemColor:
-                                      isDark
-                                          ? Colors.white
-                                          : const Color(0xFF000000),
-                                  unselectedItemColor:
-                                      isDark
-                                          ? const Color.fromARGB(
-                                            153,
-                                            255,
-                                            255,
-                                            255,
-                                          )
-                                          : const Color(0xFF333333),
-                                ),
-                          ),
-                          child: BottomNavigationBar(
-                            backgroundColor: Colors.transparent,
-                            elevation: 0,
-                            showSelectedLabels: true,
-                            showUnselectedLabels: true,
-                            selectedLabelStyle: TextStyle(
-                              fontWeight: FontWeight.w500, // Medium weight
-                            ),
-                            unselectedLabelStyle: TextStyle(
-                              fontWeight: FontWeight.w500, // Medium weight
-                            ),
-                            items: [
-                              BottomNavigationBarItem(
-                                icon: SFSymbolHelper.getBottomNavIcon(
-                                  sfSymbolName: 'house',
-                                  size: 20,
-                                  color: isDark
-                                      ? const Color.fromARGB(153, 255, 255, 255)
-                                      : const Color(0xFF333333),
-                                ),
-                                activeIcon: SFSymbolHelper.getBottomNavIcon(
-                                  sfSymbolName: 'house',
-                                  size: 20,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF000000),
-                                ),
-                                label: 'Start',
-                              ),
-                              BottomNavigationBarItem(
-                                icon: SFSymbolHelper.getIcon(
-                                  iconPath: 'assets/icons/headset.svg',
-                                  width: 20,
-                                  height: 20,
-                                  color: isDark
-                                      ? const Color.fromARGB(153, 255, 255, 255)
-                                      : const Color(0xFF333333),
-                                ),
-                                activeIcon: SFSymbolHelper.getIcon(
-                                  iconPath: 'assets/icons/headset.svg',
-                                  width: 20,
-                                  height: 20,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF000000),
-                                ),
-                                label: 'Support',
-                              ),
-                              BottomNavigationBarItem(
-                                icon: SFSymbolHelper.getBottomNavIcon(
-                                  sfSymbolName: 'person',
-                                  size: 20,
-                                  color: isDark
-                                      ? const Color.fromARGB(153, 255, 255, 255)
-                                      : const Color(0xFF333333),
-                                ),
-                                activeIcon: SFSymbolHelper.getBottomNavIcon(
-                                  sfSymbolName: 'person',
-                                  size: 20,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF000000),
-                                ),
-                                label: 'Profil',
-                              ),
-                            ],
-                            currentIndex:
-                                _bottomNavIndex < 3
-                                    ? _bottomNavIndex
-                                    : _mainTabIndex,
-                            onTap: (index) {
-                              setState(() {
-                                if (index == 0 && _bottomNavIndex == 0) {
-                                  selectedIndex = 0;
-                                } else {
-                                  _bottomNavIndex = index;
-                                  if (index < 3) _mainTabIndex = index;
-                                }
-                              });
-                            },
-                            type: BottomNavigationBarType.fixed,
+                      Positioned(
+                        top: s(-2),
+                        right: s(-2),
+                        child: Container(
+                          width: s(8),
+                          height: s(8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFF2121),
+                            shape: BoxShape.circle,
                           ),
                         ),
                       ),
                     ],
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      if (_bottomNavIndex == _notificationsTabIndex) {
+                        _bottomNavIndex = _mainTabIndex;
+                      } else {
+                        if (_bottomNavIndex <= _createTabIndex) {
+                          _mainTabIndex = _bottomNavIndex;
+                        }
+                        _bottomNavIndex = _notificationsTabIndex;
+                      }
+                    });
+                    _syncDelayedProfileWarmup();
+                  },
+                ),
+        ),
+        title: AnimatedSwitcher(
+          duration: _tabFadeInDuration,
+          reverseDuration: _tabFadeOutDuration,
+          switchInCurve: Curves.easeIn,
+          switchOutCurve: Curves.easeOut,
+          layoutBuilder: (currentChild, previousChildren) {
+            return Stack(
+              alignment: Alignment.center,
+              children: [...previousChildren, ?currentChild],
+            );
+          },
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeInOut,
+            ),
+            child: child,
+          ),
+          child: _bottomNavIndex == _profileTabIndex
+              ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
+              : Text(
+                  'MiniJobNow',
+                  key: const ValueKey<String>('appbar-title'),
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: s(28),
+                  ),
+                ),
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          AnimatedSwitcher(
+            duration: _tabFadeInDuration,
+            reverseDuration: _tabFadeOutDuration,
+            switchInCurve: Curves.easeIn,
+            switchOutCurve: Curves.easeOut,
+            layoutBuilder: (currentChild, previousChildren) {
+              return Stack(
+                alignment: Alignment.topCenter,
+                children: [...previousChildren, ?currentChild],
+              );
+            },
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ),
+              child: child,
+            ),
+            child: KeyedSubtree(
+              key: ValueKey<int>(_bottomNavIndex),
+              child: SizedBox.expand(child: buildTab(_bottomNavIndex)),
+            ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: showAppBarChrome ? 1 : 0),
+                duration: showAppBarChrome
+                    ? _tabFadeInDuration
+                    : _tabFadeOutDuration,
+                curve: Curves.easeInOut,
+                builder: (context, opacity, child) {
+                  if (opacity <= 0) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return ColoredBox(
+                    color: bgColor.withValues(alpha: opacity),
+                    child: SizedBox(height: topBarInset),
+                  );
+                },
+              ),
+            ),
+          ),
+          ShakeOverlay(
+            isVisible: _showShakeOverlay,
+            onDismiss: _dismissShakeOverlay,
+          ),
+          if (_activeProfileWarmupTarget != null)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: TickerMode(
+                  enabled: false,
+                  child: Offstage(
+                    offstage: true,
+                    child: ProfileDetailPrewarmHost(
+                      target: _activeProfileWarmupTarget!,
+                      isDark: isDark,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+      bottomNavigationBar: SizedBox(
+        height: s(85),
+        child: AppleLiquidTabBar(
+          currentIndex: _bottomNavIndex <= _createTabIndex
+              ? _bottomNavIndex
+              : _mainTabIndex,
+          height: s(85),
+          selectedTintColor: const Color(0xFF007AFF),
+          items: const <AppleLiquidTabItem>[
+            AppleLiquidTabItem(title: 'Start', systemImage: 'house.fill'),
+            AppleLiquidTabItem(
+              title: 'Aktivität',
+              systemImage: 'list.bullet.rectangle.portrait.fill',
+            ),
+            AppleLiquidTabItem(title: 'Profil', systemImage: 'person.fill'),
+          ],
+          searchItem: const AppleLiquidTabItem(
+            title: 'Erstellen',
+            systemImage: 'plus',
+            isSearch: true,
+          ),
+          onChanged: (index) {
+            HapticFeedback.selectionClick();
+            setState(() {
+              if (index == _startTabIndex &&
+                  _bottomNavIndex == _startTabIndex) {
+                selectedIndex = 0;
+              } else {
+                _bottomNavIndex = index;
+                _mainTabIndex = index;
+              }
+            });
+            _syncDelayedProfileWarmup();
+          },
+        ),
+      ),
+    );
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          textTheme: Theme.of(context).textTheme.apply(fontFamily: 'SF Pro'),
+        ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          color: bgColor,
+          child: scaffold,
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileVerificationInfoBox extends StatelessWidget {
+  const _ProfileVerificationInfoBox({
+    required this.isDark,
+    required this.useGlassEffects,
+    required this.s,
+    required this.onDismiss,
+    required this.onVerifyNow,
+  });
+
+  final bool isDark;
+  final bool useGlassEffects;
+  final double Function(double) s;
+  final VoidCallback onDismiss;
+  final VoidCallback onVerifyNow;
+
+  @override
+  Widget build(BuildContext context) {
+    final double infoBoxRadius = s(15);
+    final double infoNestedRadius = s(7);
+
+    final Widget content = Stack(
+      children: [
+        Positioned(
+          top: s(8),
+          left: s(8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: s(8), vertical: s(2)),
+                decoration: BoxDecoration(
+                  color: HSLColor.fromAHSL(0.3, 211, 1.0, 0.50).toColor(),
+                  borderRadius: BorderRadius.circular(infoNestedRadius),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Wichtig',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color(0xFF4DAAFC),
+                    fontSize: s(12),
+                    fontWeight: FontWeight.w400,
+                    height: 1.0,
+                  ),
+                ),
+              ),
+              SizedBox(height: s(7)),
+              Text(
+                'Verifiziere deinen Account',
+                style: TextStyle(
+                  color: const Color(0xFFBCBCBC),
+                  fontSize: s(15),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: s(2)),
+              Text(
+                'Verifiziere bitte deine Email und deine\nTelefonnummer um loszulegen.',
+                style: TextStyle(
+                  color: const Color(0xFF747474),
+                  fontSize: s(11.5),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 0,
+          right: 0,
+          child: Semantics(
+            button: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onDismiss,
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: s(12), right: s(12)),
+                    child: SFSymbolHelper.getIcon(
+                      iconPath: 'assets/icons/xmark.svg',
+                      width: s(15),
+                      height: s(15),
+                      color: const Color(0xFF747474),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
         ),
+        Positioned(
+          left: s(8),
+          bottom: s(8),
+          child: Semantics(
+            button: true,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onVerifyNow,
+              child: SizedBox(
+                width: s(70),
+                height: 44,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: SizedBox(
+                    width: s(70),
+                    height: s(23),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: HSLColor.fromAHSL(0.50, 0, 0, 0.10).toColor(),
+                        borderRadius: BorderRadius.circular(infoNestedRadius),
+                        border: Border.all(
+                          width: s(1),
+                          color: HSLColor.fromAHSL(0.84, 0, 0, 0.18).toColor(),
+                          strokeAlign: BorderSide.strokeAlignInside,
+                        ),
+                      ),
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Jetzt',
+                              style: TextStyle(
+                                color: const Color(0xFFB3B3B3),
+                                fontSize: s(14),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(width: s(5)),
+                            SFSymbolHelper.getIcon(
+                              iconPath: 'assets/icons/arrow.up.right.svg',
+                              width: s(12),
+                              height: s(12),
+                              color: const Color(0xFFB3B3B3),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+
+    final Widget glassChild = GlassSurface(
+      config: LiquidGlassStyle.infoBox(isDark: isDark, s: s),
+      isDark: isDark,
+      borderRadius: infoBoxRadius,
+      child: content,
+    );
+
+    final Widget lightweightChild = ClipRRect(
+      borderRadius: BorderRadius.circular(infoBoxRadius),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: isDark
+              ? const Color.fromRGBO(13, 13, 13, 0.94)
+              : const Color.fromRGBO(255, 255, 255, 0.94),
+          borderRadius: BorderRadius.circular(infoBoxRadius),
+          border: Border.all(
+            color: isDark
+                ? const Color.fromRGBO(255, 255, 255, 0.08)
+                : const Color(0xFFD9D9D9),
+            width: s(1),
+          ),
+        ),
+        child: content,
       ),
     );
+
+    final Widget decoratedCard = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 140),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeOut,
+      child: useGlassEffects
+          ? GlassPressable(
+              key: const ValueKey<String>('profile-info-glass'),
+              borderRadius: infoBoxRadius,
+              child: glassChild,
+            )
+          : SizedBox.expand(
+              key: const ValueKey<String>('profile-info-flat'),
+              child: lightweightChild,
+            ),
+    );
+
+    return SizedBox(height: s(124), child: decoratedCard);
   }
 }

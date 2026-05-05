@@ -7,3 +7,5 @@ ios/Pods/
 **/*.xcuserdatad/
 **/*.xcscmblueprint
 .DS_Store
+.ralph/
+.ralphrc

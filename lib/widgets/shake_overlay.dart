@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/ui_scale.dart';
 
 class ShakeOverlay extends StatefulWidget {
   final bool isVisible;
@@ -70,6 +71,7 @@ class _ShakeOverlayState extends State<ShakeOverlay>
   Widget build(BuildContext context) {
     if (!widget.isVisible) return const SizedBox.shrink();
 
+    final ui = UiScale.of(context, designWidth: 402);
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -87,25 +89,25 @@ class _ShakeOverlayState extends State<ShakeOverlay>
                   child: GestureDetector(
                     onTap: _dismiss,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 32,
-                        vertical: 16,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: ui.s(32),
+                        vertical: ui.s(16),
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(ui.s(16)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.2),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                            blurRadius: ui.s(10),
+                            offset: Offset(0, ui.s(4)),
                           ),
                         ],
                       ),
-                      child: const Text(
+                      child: Text(
                         'Geschüttelt!',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: ui.s(24),
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
