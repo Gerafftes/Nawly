@@ -213,7 +213,7 @@ class _CreateActionArrowPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
 
     final Offset start = Offset(size.width * 0.42, size.height * 0.08);
-    final Offset end = Offset(size.width * 0.89, size.height * 0.99);
+    final Offset end = Offset(size.width * 0.903, size.height * 0.99);
     final Path path = Path()
       ..moveTo(start.dx, start.dy)
       ..cubicTo(
