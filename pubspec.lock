@@ -273,10 +273,10 @@ packages:
     dependency: "direct main"
     description:
       name: mjn_liquid_ui
-      sha256: "963b4f94c625e7deeeb62046f40fdb52f4030bd40a8708136926ce69c5b0a5e8"
+      sha256: "6a82109987efea972c91a19a2e9c15ca73971872fbc14f0942a4e00f791a28c4"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.9"
+    version: "0.2.0"
   path:
     dependency: transitive
     description:

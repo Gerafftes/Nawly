@@ -45,7 +45,6 @@ class _PaymentsPageState extends State<PaymentsPage>
     'assets/icons/visa_groß.svg',
     'assets/icons/checkmark.circle.fill.svg',
     'assets/icons/plus.circle.fill.svg',
-    'assets/icons/square.and.pencil.circle.fill.svg',
     'assets/icons/checkmark.seal.fill.svg',
     'assets/icons/chevron.right.svg',
   };
@@ -55,6 +54,9 @@ class _PaymentsPageState extends State<PaymentsPage>
   int? _standardPayoutIndex;
   int? _selectedPaymentMethodIndex;
   Timer? _paymentMethodPressTimer;
+  final LayerLink _paymentMethodHintPopoverLink = LayerLink();
+  final OverlayPortalController _paymentMethodHintPopoverController =
+      OverlayPortalController(debugLabel: 'payment_method_hint_popover');
 
   static const List<_PaymentMethodData> _paymentMethods = [
     _PaymentMethodData(
@@ -229,71 +231,74 @@ class _PaymentsPageState extends State<PaymentsPage>
     _secondSwipeChevronScale = _buildSwipeChevronScaleAnimation(
       const Interval(0.14, 0.42, curve: Curves.easeInOut),
     );
-    _swipeSnapController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    )
-      ..addListener(() {
-        if (_swipeSnapAnimation != null && mounted) {
-          final double nextOffset = _swipeSnapAnimation!.value;
-          final bool shouldTriggerSnapHaptic = _pendingHapticOnSnap &&
-              !_didTriggerSnapHaptic &&
-              _snapHapticTriggerOffset != null &&
-              nextOffset >= _snapHapticTriggerOffset!;
-          if (shouldTriggerSnapHaptic) {
-            HapticFeedback.heavyImpact();
-            _didTriggerSnapHaptic = true;
-          }
-          setState(() {
-            _payoutSwipeOffset = nextOffset;
-            _showSwipeEndCap = nextOffset > 0;
+    _swipeSnapController =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 300),
+          )
+          ..addListener(() {
+            if (_swipeSnapAnimation != null && mounted) {
+              final double nextOffset = _swipeSnapAnimation!.value;
+              final bool shouldTriggerSnapHaptic =
+                  _pendingHapticOnSnap &&
+                  !_didTriggerSnapHaptic &&
+                  _snapHapticTriggerOffset != null &&
+                  nextOffset >= _snapHapticTriggerOffset!;
+              if (shouldTriggerSnapHaptic) {
+                HapticFeedback.heavyImpact();
+                _didTriggerSnapHaptic = true;
+              }
+              setState(() {
+                _payoutSwipeOffset = nextOffset;
+                _showSwipeEndCap = nextOffset > 0;
+              });
+            }
+          })
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed) {
+              final bool shouldOpenPayoutPage = _openPayoutPageAfterSnap;
+              if (mounted) {
+                setState(() {
+                  _swipeSnapAnimation = null;
+                  _pendingHapticOnSnap = false;
+                  _openPayoutPageAfterSnap = false;
+                  _snapHapticTriggerOffset = null;
+                  _didTriggerSnapHaptic = false;
+                });
+              }
+              if (shouldOpenPayoutPage) {
+                unawaited(_runPayoutCompletionFlow());
+              }
+            }
           });
-        }
-      })
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed) {
-          final bool shouldOpenPayoutPage = _openPayoutPageAfterSnap;
-          if (mounted) {
-            setState(() {
-              _swipeSnapAnimation = null;
-              _pendingHapticOnSnap = false;
-              _openPayoutPageAfterSnap = false;
-              _snapHapticTriggerOffset = null;
-              _didTriggerSnapHaptic = false;
-            });
-          }
-          if (shouldOpenPayoutPage) {
-            unawaited(_runPayoutCompletionFlow());
-          }
-        }
-      });
+    if (!widget.prewarm) {
+      _paymentMethodHintPopoverController.show();
+    }
   }
 
   @override
   void dispose() {
     _paymentMethodPressTimer?.cancel();
+    if (_paymentMethodHintPopoverController.isShowing) {
+      _paymentMethodHintPopoverController.hide();
+    }
     _swipeChevronScaleController.dispose();
     _swipeSnapController.dispose();
     super.dispose();
   }
 
   Animation<double> _buildSwipeChevronScaleAnimation(Interval interval) {
-    return TweenSequence<double>(
-      <TweenSequenceItem<double>>[
-        TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 1.0, end: 1.2),
-          weight: 50,
-        ),
-        TweenSequenceItem<double>(
-          tween: Tween<double>(begin: 1.2, end: 1.0),
-          weight: 50,
-        ),
-      ],
-    ).animate(
-      CurvedAnimation(
-        parent: _swipeChevronScaleController,
-        curve: interval,
+    return TweenSequence<double>(<TweenSequenceItem<double>>[
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 1.0, end: 1.2),
+        weight: 50,
       ),
+      TweenSequenceItem<double>(
+        tween: Tween<double>(begin: 1.2, end: 1.0),
+        weight: 50,
+      ),
+    ]).animate(
+      CurvedAnimation(parent: _swipeChevronScaleController, curve: interval),
     );
   }
 
@@ -318,9 +323,7 @@ class _PaymentsPageState extends State<PaymentsPage>
     });
 
     _pushWithFade(
-      PayoutProcessingPage(
-        isDarkOverride: _resolveIsDark(context),
-      ),
+      PayoutProcessingPage(isDarkOverride: _resolveIsDark(context)),
     );
   }
 
@@ -335,19 +338,18 @@ class _PaymentsPageState extends State<PaymentsPage>
     }
     _swipeSnapController.stop();
     setState(() {
-      _swipeSnapAnimation = Tween<double>(
-        begin: _payoutSwipeOffset,
-        end: target,
-      ).animate(
-        CurvedAnimation(
-          parent: _swipeSnapController,
-          curve: curve ?? Curves.easeOutCubic,
-        ),
-      );
+      _swipeSnapAnimation =
+          Tween<double>(begin: _payoutSwipeOffset, end: target).animate(
+            CurvedAnimation(
+              parent: _swipeSnapController,
+              curve: curve ?? Curves.easeOutCubic,
+            ),
+          );
       _pendingHapticOnSnap = triggerHaptic;
       _openPayoutPageAfterSnap = openPayoutPageAfterSnap;
-      _snapHapticTriggerOffset =
-          triggerHaptic ? math.max(0.0, target - 12) : null;
+      _snapHapticTriggerOffset = triggerHaptic
+          ? math.max(0.0, target - 12)
+          : null;
       _didTriggerSnapHaptic = false;
     });
     _swipeSnapController.forward(from: 0);
@@ -357,6 +359,9 @@ class _PaymentsPageState extends State<PaymentsPage>
     _paymentMethodPressTimer?.cancel();
     _paymentMethodPressTimer = Timer(const Duration(milliseconds: 450), () {
       if (!mounted) return;
+      if (_selectedPaymentMethodIndex != index) {
+        HapticFeedback.selectionClick();
+      }
       setState(() {
         _selectedPaymentMethodIndex = index;
       });
@@ -388,11 +393,7 @@ class _PaymentsPageState extends State<PaymentsPage>
   }
 
   void _pushWithFade(Widget page) {
-    Navigator.of(context).push(
-      buildProfileDetailFadeRoute<void>(
-        page: page,
-      ),
-    );
+    Navigator.of(context).push(buildProfileDetailFadeRoute<void>(page: page));
   }
 
   bool _resolveIsDark(BuildContext context) {
@@ -423,8 +424,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                 MediaQuery.of(context).padding.left + s(16);
             final double overlayRightInset =
                 MediaQuery.of(context).padding.right + s(16);
-            final double overlaySafeBottom =
-                MediaQuery.of(context).viewPadding.bottom;
+            final double overlaySafeBottom = MediaQuery.of(
+              context,
+            ).viewPadding.bottom;
             final double overlayButtonHeight = math.max(44, s(41));
             final double preferredOverlayHeight = math.max(
               0.0,
@@ -433,8 +435,8 @@ class _PaymentsPageState extends State<PaymentsPage>
             final String payoutName = _selectedPayoutIndex == 0
                 ? 'PayPal'
                 : _selectedPayoutIndex == 1
-                    ? 'Visa'
-                    : 'Gutschein';
+                ? 'Visa'
+                : 'Gutschein';
             final bool isAutoSelected = draftSelectedPayoutSchedule == 0;
             final bool isStandardSelected =
                 draftStandardPayoutIndex == _selectedPayoutIndex;
@@ -524,29 +526,32 @@ class _PaymentsPageState extends State<PaymentsPage>
                                           height: overlayButtonHeight,
                                           child: AnimatedSwitcher(
                                             duration: const Duration(
-                                                milliseconds: 320),
+                                              milliseconds: 320,
+                                            ),
                                             switchInCurve: Curves.easeIn,
                                             switchOutCurve: Curves.easeOut,
                                             transitionBuilder:
                                                 (child, animation) =>
                                                     FadeTransition(
-                                              opacity: animation,
-                                              child: child,
-                                            ),
+                                                      opacity: animation,
+                                                      child: child,
+                                                    ),
                                             child: DecoratedBox(
                                               key: ValueKey<Color>(autoColor),
                                               decoration: BoxDecoration(
                                                 color: autoColor,
                                                 borderRadius:
                                                     BorderRadius.circular(
-                                                        s(15)),
+                                                      s(15),
+                                                    ),
                                               ),
                                               child: Center(
                                                 child: Text(
                                                   'Automatisch',
                                                   style: TextStyle(
-                                                    color:
-                                                        const Color(0xFFF2F2F2),
+                                                    color: const Color(
+                                                      0xFFF2F2F2,
+                                                    ),
                                                     fontSize: s(15),
                                                     fontWeight: FontWeight.w600,
                                                   ),
@@ -579,29 +584,32 @@ class _PaymentsPageState extends State<PaymentsPage>
                                           height: overlayButtonHeight,
                                           child: AnimatedSwitcher(
                                             duration: const Duration(
-                                                milliseconds: 340),
+                                              milliseconds: 340,
+                                            ),
                                             switchInCurve: Curves.easeInOut,
                                             switchOutCurve: Curves.easeInOut,
                                             transitionBuilder:
                                                 (child, animation) =>
                                                     FadeTransition(
-                                              opacity: animation,
-                                              child: child,
-                                            ),
+                                                      opacity: animation,
+                                                      child: child,
+                                                    ),
                                             child: DecoratedBox(
                                               key: ValueKey<Color>(manualColor),
                                               decoration: BoxDecoration(
                                                 color: manualColor,
                                                 borderRadius:
                                                     BorderRadius.circular(
-                                                        s(15)),
+                                                      s(15),
+                                                    ),
                                               ),
                                               child: Center(
                                                 child: Text(
                                                   'Manuell',
                                                   style: TextStyle(
-                                                    color:
-                                                        const Color(0xFFF2F2F2),
+                                                    color: const Color(
+                                                      0xFFF2F2F2,
+                                                    ),
                                                     fontSize: s(15),
                                                     fontWeight: FontWeight.w600,
                                                   ),
@@ -676,9 +684,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                                   switchOutCurve: Curves.easeInOut,
                                   transitionBuilder: (child, animation) =>
                                       FadeTransition(
-                                    opacity: animation,
-                                    child: child,
-                                  ),
+                                        opacity: animation,
+                                        child: child,
+                                      ),
                                   child: Container(
                                     key: ValueKey<String>(
                                       '${isAutoSelected ? 'auto' : 'manual'}-$payoutName',
@@ -686,8 +694,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                                     height: s(60),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF1A1A1A),
-                                      borderRadius:
-                                          BorderRadius.circular(s(15)),
+                                      borderRadius: BorderRadius.circular(
+                                        s(15),
+                                      ),
                                     ),
                                     padding: EdgeInsets.symmetric(
                                       horizontal: s(12),
@@ -736,8 +745,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  color:
-                                                      const Color(0xFFF2F2F2),
+                                                  color: const Color(
+                                                    0xFFF2F2F2,
+                                                  ),
                                                   fontSize: s(15),
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -747,8 +757,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
-                                                  color:
-                                                      const Color(0xFFB3B3B3),
+                                                  color: const Color(
+                                                    0xFFB3B3B3,
+                                                  ),
                                                   fontSize: s(12),
                                                   fontWeight: FontWeight.w600,
                                                 ),
@@ -820,10 +831,12 @@ class _PaymentsPageState extends State<PaymentsPage>
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
     final bool isDark = _resolveIsDark(context);
-    final Color bgColor =
-        isDark ? const Color(0xFF020202) : const Color(0xFFE6E6E6);
-    final Color textColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
+    final Color bgColor = isDark
+        ? const Color(0xFF020202)
+        : const Color(0xFFE6E6E6);
+    final Color textColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
 
     if (widget.prewarm && widget.prewarmPhase == 0) {
       return _PaymentsWarmupPhaseOnePage(
@@ -856,8 +869,8 @@ class _PaymentsPageState extends State<PaymentsPage>
     final String? standardPayoutName = _standardPayoutIndex == 0
         ? 'PayPal'
         : _standardPayoutIndex == 1
-            ? 'Visa'
-            : null;
+        ? 'Visa'
+        : null;
     const String addPaymentLabel = 'Hinzufügen';
     const String paymentMethodHintText =
         'Gedrückt halten, um als Standard festzulegen';
@@ -872,8 +885,8 @@ class _PaymentsPageState extends State<PaymentsPage>
     final String nextPayoutText = isManualSelected
         ? (hasStandardPayout ? '$standardPayoutName Manuell' : 'Auswählen')
         : (hasStandardPayout
-            ? '$standardPayoutName $nextPayoutLabel'
-            : 'Auswählen');
+              ? '$standardPayoutName $nextPayoutLabel'
+              : 'Auswählen');
     final TextStyle paymentMethodLabelStyle = TextStyle(
       color: const Color(0xFFE6E6E6),
       fontSize: s(11),
@@ -884,10 +897,8 @@ class _PaymentsPageState extends State<PaymentsPage>
       fontSize: s(12),
       fontWeight: FontWeight.normal,
     );
-    final TextStyle paymentMethodHintTextStyle =
-        paymentMethodHintStyle.copyWith(
-      height: 1,
-    );
+    final TextStyle paymentMethodHintTextStyle = paymentMethodHintStyle
+        .copyWith(height: 1);
     final TextDirection textDirection = Directionality.of(context);
     double measureLabelWidth(String text) {
       if (!isInitialContentReady) {
@@ -912,19 +923,22 @@ class _PaymentsPageState extends State<PaymentsPage>
                 : paymentMethodIconSize;
           }).toList()
         : const <double>[];
-    final double plusLabelWidth =
-        isInitialContentReady ? measureLabelWidth(addPaymentLabel) : 0;
+    final double plusLabelWidth = isInitialContentReady
+        ? measureLabelWidth(addPaymentLabel)
+        : 0;
     final double plusColumnWidth = plusLabelWidth > paymentMethodIconSize
         ? plusLabelWidth
         : paymentMethodIconSize;
-    final int payPalIndex = _paymentMethods
-        .indexWhere((method) => method.semanticsLabel == 'PayPal');
+    final int payPalIndex = _paymentMethods.indexWhere(
+      (method) => method.semanticsLabel == 'PayPal',
+    );
     final int targetIndex = payPalIndex == -1 ? 0 : payPalIndex;
     double offset = plusColumnWidth + paymentMethodSpacing;
     if (isInitialContentReady) {
       for (int i = 0; i < targetIndex; i++) {
-        final double labelWidth =
-            measureLabelWidth(_paymentMethods[i].semanticsLabel);
+        final double labelWidth = measureLabelWidth(
+          _paymentMethods[i].semanticsLabel,
+        );
         final double columnWidth = labelWidth > paymentMethodIconSize
             ? labelWidth
             : paymentMethodIconSize;
@@ -955,10 +969,7 @@ class _PaymentsPageState extends State<PaymentsPage>
               surfaceTintColor: Colors.transparent,
               centerTitle: true,
               titleSpacing: null,
-              iconTheme: IconThemeData(
-                color: textColor,
-                size: s(20),
-              ),
+              iconTheme: IconThemeData(color: textColor, size: s(20)),
               title: Text(
                 'Zahlungen & Auszahlungen',
                 style: TextStyle(
@@ -977,13 +988,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                   ? LayoutBuilder(
                       builder: (context, constraints) {
                         final EdgeInsetsGeometry scrollPadding =
-                            EdgeInsets.symmetric(
-                          horizontal: s(16),
-                        );
-                        final EdgeInsets resolvedPadding =
-                            scrollPadding.resolve(
-                          Directionality.of(context),
-                        );
+                            EdgeInsets.symmetric(horizontal: s(16));
+                        final EdgeInsets resolvedPadding = scrollPadding
+                            .resolve(Directionality.of(context));
                         final double availableContentWidth =
                             constraints.maxWidth - resolvedPadding.horizontal;
 
@@ -997,20 +1004,19 @@ class _PaymentsPageState extends State<PaymentsPage>
 
                         final TextPainter paymentMethodHintPainter =
                             TextPainter(
-                          text: TextSpan(
-                            text: paymentMethodHintText,
-                            style: paymentMethodHintTextStyle,
-                          ),
-                          textDirection: textDirection,
-                          maxLines: 1,
-                        )..layout(
-                                maxWidth: math.max(
-                                  0,
-                                  availableContentWidth -
-                                      (hintHorizontalPadding +
-                                          hintRightPadding),
-                                ),
-                              );
+                              text: TextSpan(
+                                text: paymentMethodHintText,
+                                style: paymentMethodHintTextStyle,
+                              ),
+                              textDirection: textDirection,
+                              maxLines: 1,
+                            )..layout(
+                              maxWidth: math.max(
+                                0,
+                                availableContentWidth -
+                                    (hintHorizontalPadding + hintRightPadding),
+                              ),
+                            );
 
                         final double paymentMethodHintTextWidth =
                             paymentMethodHintPainter.width;
@@ -1026,16 +1032,100 @@ class _PaymentsPageState extends State<PaymentsPage>
                               s(7),
                         );
 
-                        final double paymentMethodHintContainerHeight =
-                            math.max(
-                          s(25),
-                          paymentMethodHintTextHeight +
-                              (paymentMethodHintVerticalPadding * 2),
-                        );
+                        final double paymentMethodHintContainerHeight = math
+                            .max(
+                              s(25),
+                              paymentMethodHintTextHeight +
+                                  (paymentMethodHintVerticalPadding * 2),
+                            );
                         final double paymentMethodFooterHeight =
                             paymentMethodHintTopSpacing +
-                                paymentMethodHintContainerHeight +
-                                paymentMethodHintBottomSpacing;
+                            paymentMethodHintContainerHeight +
+                            paymentMethodHintBottomSpacing;
+
+                        Widget buildPaymentMethodHintPopover(
+                          BuildContext overlayContext,
+                        ) {
+                          return CompositedTransformFollower(
+                            link: _paymentMethodHintPopoverLink,
+                            showWhenUnlinked: false,
+                            targetAnchor: Alignment.bottomLeft,
+                            followerAnchor: Alignment.topLeft,
+                            offset: Offset(0, paymentMethodHintTopSpacing),
+                            child: IgnorePointer(
+                              child: AnimatedOpacity(
+                                opacity: _selectedPaymentMethodIndex == null
+                                    ? 1
+                                    : 0,
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeInOut,
+                                child: SizedBox(
+                                  width: availableContentWidth,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      SizedBox(
+                                        width: paymentMethodHintBoxWidth,
+                                        child: Container(
+                                          height:
+                                              paymentMethodHintContainerHeight,
+                                          alignment: Alignment.center,
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: hintHorizontalPadding,
+                                            vertical:
+                                                paymentMethodHintVerticalPadding,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF1A1A1A),
+                                            borderRadius: BorderRadius.circular(
+                                              s(9),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            paymentMethodHintText,
+                                            style: paymentMethodHintTextStyle,
+                                            maxLines: 1,
+                                            softWrap: false,
+                                            overflow: TextOverflow.visible,
+                                            textAlign: TextAlign.center,
+                                            strutStyle: StrutStyle(
+                                              fontSize:
+                                                  paymentMethodHintTextStyle
+                                                      .fontSize ??
+                                                  s(12),
+                                              height: 1,
+                                              forceStrutHeight: true,
+                                            ),
+                                            textHeightBehavior:
+                                                const TextHeightBehavior(
+                                                  applyHeightToFirstAscent:
+                                                      false,
+                                                  applyHeightToLastDescent:
+                                                      false,
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        left: paymentMethodTriangleLeft,
+                                        top: -paymentMethodTriangleSize,
+                                        child: CustomPaint(
+                                          size: Size(
+                                            paymentMethodTriangleSize,
+                                            paymentMethodTriangleSize,
+                                          ),
+                                          painter: const _TrianglePainter(
+                                            color: Color(0xFF1A1A1A),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
 
                         return StretchingOverscrollIndicator(
                           axisDirection: AxisDirection.down,
@@ -1065,226 +1155,57 @@ class _PaymentsPageState extends State<PaymentsPage>
                                           ),
                                         ),
                                         SizedBox(height: s(16)),
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Semantics(
-                                              button: true,
-                                              child: GestureDetector(
-                                                behavior:
-                                                    HitTestBehavior.opaque,
-                                                onTapDown: (_) {},
-                                                onTapUp: (_) {},
-                                                onTapCancel: () {},
-                                                onTap: () {},
-                                                child: SizedBox(
-                                                  width: plusColumnWidth,
-                                                  child: Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      SFSymbolHelper.getIcon(
-                                                        iconPath:
-                                                            'assets/icons/plus.circle.fill.svg',
-                                                        width: s(50),
-                                                        height: s(50),
-                                                        color:
-                                                            HSLColor.fromAHSL(
-                                                                    1, 0, 0, 1)
-                                                                .toColor(),
-                                                      ),
-                                                      SizedBox(height: s(6)),
-                                                      FittedBox(
-                                                        fit: BoxFit.scaleDown,
-                                                        child: Text(
-                                                          addPaymentLabel,
-                                                          style:
-                                                              paymentMethodLabelStyle,
-                                                          textAlign:
-                                                              TextAlign.center,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                            SizedBox(
-                                                width: paymentMethodSpacing),
-                                            for (int index = 0;
-                                                index < _paymentMethods.length;
-                                                index++) ...[
-                                              SizedBox(
-                                                width:
-                                                    paymentMethodColumnWidths[
-                                                        index],
-                                                child: Semantics(
+                                        OverlayPortal(
+                                          controller:
+                                              _paymentMethodHintPopoverController,
+                                          overlayChildBuilder:
+                                              buildPaymentMethodHintPopover,
+                                          child: CompositedTransformTarget(
+                                            link: _paymentMethodHintPopoverLink,
+                                            child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Semantics(
                                                   button: true,
-                                                  label: _paymentMethods[index]
-                                                      .semanticsLabel,
                                                   child: GestureDetector(
                                                     behavior:
                                                         HitTestBehavior.opaque,
-                                                    onTapDown: (_) =>
-                                                        _startPaymentMethodPress(
-                                                            index),
-                                                    onTapUp: (_) =>
-                                                        _cancelPaymentMethodPress(),
-                                                    onTapCancel:
-                                                        _cancelPaymentMethodPress,
-                                                    child: Column(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      children: [
-                                                        _StatusCircle(
-                                                          borderColor:
-                                                              const Color(
-                                                                  0xFF007AFF),
-                                                          borderWidth: s(3),
-                                                          showBorder:
-                                                              _selectedPaymentMethodIndex ==
-                                                                  index,
-                                                          showCheckmark:
-                                                              _selectedPaymentMethodIndex ==
-                                                                  index, // Zeigt Haken & Einschnitt
-                                                          child: SFSymbolHelper
-                                                              .getIcon(
-                                                            iconPath:
-                                                                _paymentMethods[
-                                                                        index]
-                                                                    .iconPath,
-                                                            width: s(28),
-                                                            height: s(28),
-                                                            color:
-                                                                _paymentMethods[
-                                                                        index]
-                                                                    .iconColor,
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: s(6)),
-                                                        FittedBox(
-                                                          fit: BoxFit.scaleDown,
-                                                          child: Text(
-                                                            _paymentMethods[
-                                                                    index]
-                                                                .semanticsLabel,
-                                                            style:
-                                                                paymentMethodLabelStyle,
-                                                            textAlign: TextAlign
-                                                                .center,
-                                                          ),
-                                                        ),
-                                                        SizedBox(height: s(2)),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              if (index !=
-                                                  _paymentMethods.length - 1)
-                                                SizedBox(
-                                                    width:
-                                                        paymentMethodSpacing),
-                                            ],
-                                          ],
-                                        ),
-                                        SizedBox(
-                                          height: paymentMethodFooterHeight,
-                                          child: Stack(
-                                            clipBehavior: Clip.none,
-                                            children: [
-                                              Positioned(
-                                                top:
-                                                    paymentMethodHintTopSpacing,
-                                                left: 0,
-                                                child: SizedBox(
-                                                  width:
-                                                      paymentMethodHintBoxWidth,
-                                                  child: IgnorePointer(
-                                                    ignoring:
-                                                        _selectedPaymentMethodIndex !=
-                                                            null,
-                                                    child: AnimatedOpacity(
-                                                      opacity:
-                                                          _selectedPaymentMethodIndex ==
-                                                                  null
-                                                              ? 1
-                                                              : 0,
-                                                      duration: const Duration(
-                                                          milliseconds: 180),
-                                                      curve: Curves.easeInOut,
-                                                      child: Stack(
-                                                        clipBehavior: Clip.none,
+                                                    onTapDown: (_) {},
+                                                    onTapUp: (_) {},
+                                                    onTapCancel: () {},
+                                                    onTap: () {},
+                                                    child: SizedBox(
+                                                      width: plusColumnWidth,
+                                                      child: Column(
+                                                        mainAxisSize:
+                                                            MainAxisSize.min,
                                                         children: [
-                                                          Container(
-                                                            height:
-                                                                paymentMethodHintContainerHeight,
-                                                            alignment: Alignment
-                                                                .center,
-                                                            padding: EdgeInsets
-                                                                .symmetric(
-                                                              horizontal:
-                                                                  hintHorizontalPadding,
-                                                              vertical:
-                                                                  paymentMethodHintVerticalPadding,
+                                                          _StatusCircle(
+                                                            child: SFSymbolHelper.getIcon(
+                                                              iconPath:
+                                                                  'assets/icons/plus.svg',
+                                                              width: s(28),
+                                                              height: s(28),
+                                                              color:
+                                                                  const Color(
+                                                                    0xFF000000,
+                                                                  ),
                                                             ),
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              color: const Color(
-                                                                  0xFF1A1A1A),
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          s(9)),
-                                                            ),
-                                                            // KORREKTUR: Text explizit zentriert und overflow visible
+                                                          ),
+                                                          SizedBox(
+                                                            height: s(6),
+                                                          ),
+                                                          FittedBox(
+                                                            fit: BoxFit
+                                                                .scaleDown,
                                                             child: Text(
-                                                              paymentMethodHintText,
+                                                              addPaymentLabel,
                                                               style:
-                                                                  paymentMethodHintTextStyle,
-                                                              maxLines: 1,
-                                                              softWrap: false,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .visible,
+                                                                  paymentMethodLabelStyle,
                                                               textAlign:
                                                                   TextAlign
                                                                       .center,
-                                                              strutStyle:
-                                                                  StrutStyle(
-                                                                fontSize:
-                                                                    paymentMethodHintTextStyle
-                                                                            .fontSize ??
-                                                                        s(12),
-                                                                height: 1,
-                                                                forceStrutHeight:
-                                                                    true,
-                                                              ),
-                                                              textHeightBehavior:
-                                                                  const TextHeightBehavior(
-                                                                applyHeightToFirstAscent:
-                                                                    false,
-                                                                applyHeightToLastDescent:
-                                                                    false,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          Positioned(
-                                                            left:
-                                                                paymentMethodTriangleLeft,
-                                                            top:
-                                                                -paymentMethodTriangleSize,
-                                                            child: CustomPaint(
-                                                              size: Size(
-                                                                paymentMethodTriangleSize,
-                                                                paymentMethodTriangleSize,
-                                                              ),
-                                                              painter:
-                                                                  const _TrianglePainter(
-                                                                color: Color(
-                                                                    0xFF1A1A1A),
-                                                              ),
                                                             ),
                                                           ),
                                                         ],
@@ -1292,9 +1213,99 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                     ),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
+                                                SizedBox(
+                                                  width: paymentMethodSpacing,
+                                                ),
+                                                for (
+                                                  int index = 0;
+                                                  index <
+                                                      _paymentMethods.length;
+                                                  index++
+                                                ) ...[
+                                                  SizedBox(
+                                                    width:
+                                                        paymentMethodColumnWidths[index],
+                                                    child: Semantics(
+                                                      button: true,
+                                                      label:
+                                                          _paymentMethods[index]
+                                                              .semanticsLabel,
+                                                      child: GestureDetector(
+                                                        behavior:
+                                                            HitTestBehavior
+                                                                .opaque,
+                                                        onTapDown: (_) =>
+                                                            _startPaymentMethodPress(
+                                                              index,
+                                                            ),
+                                                        onTapUp: (_) =>
+                                                            _cancelPaymentMethodPress(),
+                                                        onTapCancel:
+                                                            _cancelPaymentMethodPress,
+                                                        child: Column(
+                                                          mainAxisSize:
+                                                              MainAxisSize.min,
+                                                          children: [
+                                                            _StatusCircle(
+                                                              borderColor:
+                                                                  const Color(
+                                                                    0xFF007AFF,
+                                                                  ),
+                                                              borderWidth: s(3),
+                                                              showBorder:
+                                                                  _selectedPaymentMethodIndex ==
+                                                                  index,
+                                                              showCheckmark:
+                                                                  _selectedPaymentMethodIndex ==
+                                                                  index, // Zeigt Haken & Einschnitt
+                                                              child: SFSymbolHelper.getIcon(
+                                                                iconPath:
+                                                                    _paymentMethods[index]
+                                                                        .iconPath,
+                                                                width: s(28),
+                                                                height: s(28),
+                                                                color: _paymentMethods[index]
+                                                                    .iconColor,
+                                                              ),
+                                                            ),
+                                                            SizedBox(
+                                                              height: s(6),
+                                                            ),
+                                                            FittedBox(
+                                                              fit: BoxFit
+                                                                  .scaleDown,
+                                                              child: Text(
+                                                                _paymentMethods[index]
+                                                                    .semanticsLabel,
+                                                                style:
+                                                                    paymentMethodLabelStyle,
+                                                                textAlign:
+                                                                    TextAlign
+                                                                        .center,
+                                                              ),
+                                                            ),
+                                                            SizedBox(
+                                                              height: s(2),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  if (index !=
+                                                      _paymentMethods.length -
+                                                          1)
+                                                    SizedBox(
+                                                      width:
+                                                          paymentMethodSpacing,
+                                                    ),
+                                                ],
+                                              ],
+                                            ),
                                           ),
+                                        ),
+                                        SizedBox(
+                                          height: paymentMethodFooterHeight,
                                         ),
                                         SizedBox(height: s(3)),
                                         Align(
@@ -1318,11 +1329,13 @@ class _PaymentsPageState extends State<PaymentsPage>
                                               Container(
                                                 height: payoutToggleBarHeight,
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      const Color(0xFF0D0D0D),
+                                                  color: const Color(
+                                                    0xFF0D0D0D,
+                                                  ),
                                                   borderRadius:
                                                       BorderRadius.circular(
-                                                          s(15)),
+                                                        s(15),
+                                                      ),
                                                 ),
                                               ),
                                               Padding(
@@ -1330,70 +1343,80 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                   horizontal: s(6),
                                                 ),
                                                 child: LayoutBuilder(
-                                                  builder:
-                                                      (context, constraints) {
-                                                    final double spacing =
-                                                        s(12);
+                                                  builder: (context, constraints) {
+                                                    final double spacing = s(
+                                                      12,
+                                                    );
                                                     final double buttonWidth =
                                                         ((constraints.maxWidth -
                                                                     (spacing *
                                                                         2)) /
                                                                 3)
                                                             .clamp(
-                                                                0.0, s(114.0))
+                                                              0.0,
+                                                              s(114.0),
+                                                            )
                                                             .toDouble();
                                                     return Row(
                                                       children: [
                                                         _PayoutButton(
                                                           isSelected:
                                                               _selectedPayoutIndex ==
-                                                                  0,
+                                                              0,
                                                           label: 'PayPal',
                                                           width: buttonWidth,
                                                           tapHeight:
                                                               payoutToggleTapHeight,
                                                           visualHeight:
                                                               payoutToggleButtonHeight,
-                                                          textColor: isManualSelected &&
+                                                          textColor:
+                                                              isManualSelected &&
                                                                   _standardPayoutIndex ==
                                                                       0
                                                               ? standardHighlightColor
                                                               : const Color(
-                                                                  0xFFF2F2F2),
+                                                                  0xFFF2F2F2,
+                                                                ),
                                                           onTap: () => setState(
-                                                              () =>
-                                                                  _selectedPayoutIndex =
-                                                                      0),
+                                                            () =>
+                                                                _selectedPayoutIndex =
+                                                                    0,
+                                                          ),
                                                         ),
                                                         SizedBox(
-                                                            width: spacing),
+                                                          width: spacing,
+                                                        ),
                                                         _PayoutButton(
                                                           isSelected:
                                                               _selectedPayoutIndex ==
-                                                                  1,
+                                                              1,
                                                           label: 'Visa',
                                                           width: buttonWidth,
                                                           tapHeight:
                                                               payoutToggleTapHeight,
                                                           visualHeight:
                                                               payoutToggleButtonHeight,
-                                                          textColor: isManualSelected &&
+                                                          textColor:
+                                                              isManualSelected &&
                                                                   _standardPayoutIndex ==
                                                                       1
                                                               ? standardHighlightColor
                                                               : const Color(
-                                                                  0xFFF2F2F2),
+                                                                  0xFFF2F2F2,
+                                                                ),
                                                           onTap: () => setState(
-                                                              () =>
-                                                                  _selectedPayoutIndex =
-                                                                      1),
+                                                            () =>
+                                                                _selectedPayoutIndex =
+                                                                    1,
+                                                          ),
                                                         ),
                                                         SizedBox(
-                                                            width: spacing),
+                                                          width: spacing,
+                                                        ),
                                                         _PayoutButton(
                                                           isSelected:
                                                               _selectedPayoutIndex ==
-                                                                  2,
+                                                              2,
                                                           label: 'Gutschein',
                                                           width: buttonWidth,
                                                           tapHeight:
@@ -1402,11 +1425,13 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               payoutToggleButtonHeight,
                                                           textColor:
                                                               const Color(
-                                                                  0xFFF2F2F2),
+                                                                0xFFF2F2F2,
+                                                              ),
                                                           onTap: () => setState(
-                                                              () =>
-                                                                  _selectedPayoutIndex =
-                                                                      2),
+                                                            () =>
+                                                                _selectedPayoutIndex =
+                                                                    2,
+                                                          ),
                                                         ),
                                                       ],
                                                     );
@@ -1430,27 +1455,32 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                 child: Container(
                                                   height: s(93),
                                                   decoration: BoxDecoration(
-                                                    color:
-                                                        const Color(0xFF1A1A1A),
+                                                    color: const Color(
+                                                      0xFF1A1A1A,
+                                                    ),
                                                     border: Border.all(
                                                       color: const Color(
-                                                          0xFF373737),
+                                                        0xFF373737,
+                                                      ),
                                                       width: s(1),
                                                     ),
-                                                    borderRadius:
-                                                        BorderRadius.only(
+                                                    borderRadius: BorderRadius.only(
                                                       topLeft:
                                                           const Radius.circular(
-                                                              0),
+                                                            0,
+                                                          ),
                                                       topRight:
                                                           const Radius.circular(
-                                                              0),
+                                                            0,
+                                                          ),
                                                       bottomLeft:
                                                           Radius.circular(
-                                                              s(20)),
+                                                            s(20),
+                                                          ),
                                                       bottomRight:
                                                           Radius.circular(
-                                                              s(20)),
+                                                            s(20),
+                                                          ),
                                                     ),
                                                   ),
                                                 ),
@@ -1474,13 +1504,13 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                             currentCard
                                                                 .minLabel,
                                                             style: TextStyle(
-                                                              color: HSLColor
-                                                                      .fromAHSL(
-                                                                          0.88,
-                                                                          0,
-                                                                          0,
-                                                                          0.95)
-                                                                  .toColor(),
+                                                              color:
+                                                                  HSLColor.fromAHSL(
+                                                                    0.88,
+                                                                    0,
+                                                                    0,
+                                                                    0.95,
+                                                                  ).toColor(),
                                                               fontSize: s(12.5),
                                                               fontWeight:
                                                                   FontWeight
@@ -1488,17 +1518,19 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                             ),
                                                           ),
                                                           SizedBox(
-                                                              height: s(3)),
+                                                            height: s(3),
+                                                          ),
                                                           Text(
                                                             currentCard
                                                                 .minAmount,
                                                             style: TextStyle(
-                                                              color: const Color
-                                                                  .fromRGBO(
-                                                                  242,
-                                                                  242,
-                                                                  242,
-                                                                  0.51),
+                                                              color:
+                                                                  const Color.fromRGBO(
+                                                                    242,
+                                                                    242,
+                                                                    242,
+                                                                    0.51,
+                                                                  ),
                                                               fontSize: s(20),
                                                               fontWeight:
                                                                   FontWeight
@@ -1513,7 +1545,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                           'Der Gutschein unterliegt den Einlösebedingungen von Amazon.de.\nAmazon ist keine Partei dieser Aktion.',
                                                           style: TextStyle(
                                                             color: const Color(
-                                                                0xFFF2F2F2),
+                                                              0xFFF2F2F2,
+                                                            ),
                                                             fontSize: s(11),
                                                             fontWeight:
                                                                 FontWeight.w600,
@@ -1543,13 +1576,13 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                             currentCard
                                                                 .minLabel,
                                                             style: TextStyle(
-                                                              color: HSLColor
-                                                                      .fromAHSL(
-                                                                          0.88,
-                                                                          0,
-                                                                          0,
-                                                                          0.95)
-                                                                  .toColor(),
+                                                              color:
+                                                                  HSLColor.fromAHSL(
+                                                                    0.88,
+                                                                    0,
+                                                                    0,
+                                                                    0.95,
+                                                                  ).toColor(),
                                                               fontSize: s(12.5),
                                                               fontWeight:
                                                                   FontWeight
@@ -1557,17 +1590,19 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                             ),
                                                           ),
                                                           SizedBox(
-                                                              height: s(3)),
+                                                            height: s(3),
+                                                          ),
                                                           Text(
                                                             currentCard
                                                                 .minAmount,
                                                             style: TextStyle(
-                                                              color: const Color
-                                                                  .fromRGBO(
-                                                                  242,
-                                                                  242,
-                                                                  242,
-                                                                  0.51),
+                                                              color:
+                                                                  const Color.fromRGBO(
+                                                                    242,
+                                                                    242,
+                                                                    242,
+                                                                    0.51,
+                                                                  ),
                                                               fontSize: s(20),
                                                               fontWeight:
                                                                   FontWeight
@@ -1576,7 +1611,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                           ),
                                                         ],
                                                       ),
-                                                      if (currentCard.nextLabel
+                                                      if (currentCard
+                                                          .nextLabel
                                                           .isNotEmpty) ...[
                                                         SizedBox(width: s(50)),
                                                         Column(
@@ -1588,38 +1624,41 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               currentCard
                                                                   .nextLabel,
                                                               style: TextStyle(
-                                                                color: HSLColor
-                                                                        .fromAHSL(
-                                                                            0.88,
-                                                                            0,
-                                                                            0,
-                                                                            0.95)
-                                                                    .toColor(),
-                                                                fontSize:
-                                                                    s(12.5),
+                                                                color:
+                                                                    HSLColor.fromAHSL(
+                                                                      0.88,
+                                                                      0,
+                                                                      0,
+                                                                      0.95,
+                                                                    ).toColor(),
+                                                                fontSize: s(
+                                                                  12.5,
+                                                                ),
                                                                 fontWeight:
                                                                     FontWeight
                                                                         .w500,
                                                               ),
                                                             ),
                                                             SizedBox(
-                                                                height: s(3)),
+                                                              height: s(3),
+                                                            ),
                                                             if (_selectedPayoutIndex ==
                                                                     0 ||
                                                                 _selectedPayoutIndex ==
                                                                     1)
                                                               Text(
                                                                 nextPayoutText,
-                                                                style:
-                                                                    TextStyle(
-                                                                  color: const Color
-                                                                      .fromRGBO(
-                                                                      242,
-                                                                      242,
-                                                                      242,
-                                                                      0.51),
-                                                                  fontSize:
-                                                                      s(20),
+                                                                style: TextStyle(
+                                                                  color:
+                                                                      const Color.fromRGBO(
+                                                                        242,
+                                                                        242,
+                                                                        242,
+                                                                        0.51,
+                                                                      ),
+                                                                  fontSize: s(
+                                                                    20,
+                                                                  ),
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .w600,
@@ -1646,15 +1685,18 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                         width: 44,
                                                         height: 44,
                                                         child: Center(
-                                                          child: SFSymbolHelper
-                                                              .getIcon(
+                                                          child: SFSymbolHelper.getIcon(
                                                             iconPath:
-                                                                'assets/icons/square.and.pencil.circle.fill.svg',
+                                                                'square.and.pencil.circle.fill',
                                                             height: s(36),
                                                             width: s(36),
-                                                            color: const Color
-                                                                .fromARGB(230,
-                                                                230, 230, 230),
+                                                            color:
+                                                                const Color.fromARGB(
+                                                                  230,
+                                                                  230,
+                                                                  230,
+                                                                  230,
+                                                                ),
                                                           ),
                                                         ),
                                                       ),
@@ -1663,26 +1705,29 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                 ),
                                               Container(
                                                 key: ValueKey<int>(
-                                                    _selectedPayoutIndex),
+                                                  _selectedPayoutIndex,
+                                                ),
                                                 height: s(204),
                                                 width: double.infinity,
                                                 decoration: BoxDecoration(
-                                                  color:
-                                                      const Color(0xFF1A1A1A),
+                                                  color: const Color(
+                                                    0xFF1A1A1A,
+                                                  ),
                                                   borderRadius:
                                                       BorderRadius.circular(
-                                                          s(18)),
+                                                        s(18),
+                                                      ),
                                                   border: Border.all(
                                                     width: s(1),
-                                                    color:
-                                                        const Color(0xFF007AFF),
+                                                    color: const Color(
+                                                      0xFF007AFF,
+                                                    ),
                                                   ),
                                                 ),
                                                 child: Stack(
                                                   children: [
                                                     Padding(
-                                                      padding:
-                                                          EdgeInsets.fromLTRB(
+                                                      padding: EdgeInsets.fromLTRB(
                                                         s(16),
                                                         s(16),
                                                         s(13),
@@ -1699,8 +1744,10 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                           Text(
                                                             currentCard.title,
                                                             style: TextStyle(
-                                                              color: const Color(
-                                                                  0xFFF2F2F2),
+                                                              color:
+                                                                  const Color(
+                                                                    0xFFF2F2F2,
+                                                                  ),
                                                               fontSize: s(23),
                                                               fontWeight:
                                                                   FontWeight
@@ -1718,19 +1765,21 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               Text(
                                                                 currentCard
                                                                     .amount,
-                                                                style:
-                                                                    TextStyle(
+                                                                style: TextStyle(
                                                                   color: const Color(
-                                                                      0xFFF2F2F2),
-                                                                  fontSize:
-                                                                      s(25),
+                                                                    0xFFF2F2F2,
+                                                                  ),
+                                                                  fontSize: s(
+                                                                    25,
+                                                                  ),
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .w600,
                                                                 ),
                                                               ),
                                                               SizedBox(
-                                                                  height: s(0)),
+                                                                height: s(0),
+                                                              ),
                                                               SizedBox(
                                                                 height:
                                                                     statusRowHeight,
@@ -1750,29 +1799,35 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                           CrossAxisAlignment
                                                                               .center,
                                                                       children: [
-                                                                        SFSymbolHelper
-                                                                            .getIcon(
+                                                                        SFSymbolHelper.getIcon(
                                                                           iconPath:
                                                                               'assets/icons/checkmark.seal.fill.svg',
-                                                                          width:
-                                                                              s(18),
-                                                                          height:
-                                                                              s(18),
-                                                                          color:
-                                                                              const Color(0xFF04C40A),
+                                                                          width: s(
+                                                                            18,
+                                                                          ),
+                                                                          height: s(
+                                                                            18,
+                                                                          ),
+                                                                          color: const Color(
+                                                                            0xFF04C40A,
+                                                                          ),
                                                                         ),
                                                                         SizedBox(
-                                                                            width:
-                                                                                s(6)),
+                                                                          width:
+                                                                              s(
+                                                                                6,
+                                                                              ),
+                                                                        ),
                                                                         Text(
                                                                           currentCard
                                                                               .statusText,
-                                                                          style:
-                                                                              TextStyle(
-                                                                            color:
-                                                                                const Color(0xFFB3B3B3),
-                                                                            fontSize:
-                                                                                s(16),
+                                                                          style: TextStyle(
+                                                                            color: const Color(
+                                                                              0xFFB3B3B3,
+                                                                            ),
+                                                                            fontSize: s(
+                                                                              16,
+                                                                            ),
                                                                             fontWeight:
                                                                                 FontWeight.w600,
                                                                           ),
@@ -1802,24 +1857,24 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                       child: Container(
                                                         constraints:
                                                             BoxConstraints(
-                                                                minWidth:
-                                                                    s(98)),
+                                                              minWidth: s(98),
+                                                            ),
                                                         height: s(23),
-                                                        padding: EdgeInsets
-                                                            .symmetric(
-                                                                horizontal:
-                                                                    s(6)),
-                                                        decoration:
-                                                            BoxDecoration(
+                                                        padding:
+                                                            EdgeInsets.symmetric(
+                                                              horizontal: s(6),
+                                                            ),
+                                                        decoration: BoxDecoration(
                                                           color: Colors
                                                               .transparent,
                                                           borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      s(9)),
+                                                              BorderRadius.circular(
+                                                                s(9),
+                                                              ),
                                                           border: Border.all(
                                                             color: const Color(
-                                                                0xFF007AFF),
+                                                              0xFF007AFF,
+                                                            ),
                                                             width: s(1),
                                                           ),
                                                         ),
@@ -1829,7 +1884,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                           currentCard.feeLabel,
                                                           style: TextStyle(
                                                             color: const Color(
-                                                                0xFF007AFF),
+                                                              0xFF007AFF,
+                                                            ),
                                                             fontSize: s(15),
                                                             fontWeight:
                                                                 FontWeight.w600,
@@ -1851,45 +1907,52 @@ class _PaymentsPageState extends State<PaymentsPage>
                                             width: double.infinity,
                                             child: LayoutBuilder(
                                               builder: (context, constraints) {
-                                                final double handleWidth =
-                                                    s(60);
-                                                final double handleRadius =
-                                                    -s(15);
+                                                final double handleWidth = s(
+                                                  60,
+                                                );
+                                                final double handleRadius = -s(
+                                                  15,
+                                                );
                                                 final double
-                                                    handleCornerRadius = s(15);
+                                                handleCornerRadius = s(15);
                                                 final double
-                                                    rightCornerTransition =
-                                                    s(24);
+                                                rightCornerTransition = s(24);
                                                 final double maxOffset =
                                                     (constraints.maxWidth -
                                                             handleWidth)
-                                                        .clamp(0.0,
-                                                            double.infinity);
+                                                        .clamp(
+                                                          0.0,
+                                                          double.infinity,
+                                                        );
                                                 final double snapThreshold =
                                                     (maxOffset - handleWidth)
                                                         .clamp(0.0, maxOffset);
                                                 final double clampedOffset =
                                                     _payoutSwipeOffset.clamp(
-                                                        0.0, maxOffset);
+                                                      0.0,
+                                                      maxOffset,
+                                                    );
                                                 final double
-                                                    rightCornerProgress =
+                                                rightCornerProgress =
                                                     (clampedOffset /
                                                             rightCornerTransition)
                                                         .clamp(0.0, 1.0);
                                                 final double rightCornerRadius =
                                                     handleCornerRadius *
-                                                        rightCornerProgress;
+                                                    rightCornerProgress;
                                                 final double maxTrailWidth =
                                                     (maxOffset - handleRadius)
                                                         .clamp(
-                                                            0.0,
-                                                            constraints
-                                                                .maxWidth);
+                                                          0.0,
+                                                          constraints.maxWidth,
+                                                        );
                                                 final double trailWidth =
                                                     (clampedOffset -
                                                             handleRadius)
                                                         .clamp(
-                                                            0.0, maxTrailWidth);
+                                                          0.0,
+                                                          maxTrailWidth,
+                                                        );
                                                 return Semantics(
                                                   button: true,
                                                   label:
@@ -1914,31 +1977,35 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                     },
                                                     onHorizontalDragUpdate:
                                                         (details) {
-                                                      final double nextOffset =
-                                                          (_payoutSwipeOffset +
-                                                                  details
-                                                                      .delta.dx)
-                                                              .clamp(0.0,
-                                                                  maxOffset);
-                                                      setState(() {
-                                                        _payoutSwipeOffset =
-                                                            nextOffset;
-                                                        _showSwipeEndCap =
-                                                            nextOffset > 0;
-                                                      });
-                                                    },
-                                                    onHorizontalDragEnd:
-                                                        (details) {
+                                                          final double
+                                                          nextOffset =
+                                                              (_payoutSwipeOffset +
+                                                                      details
+                                                                          .delta
+                                                                          .dx)
+                                                                  .clamp(
+                                                                    0.0,
+                                                                    maxOffset,
+                                                                  );
+                                                          setState(() {
+                                                            _payoutSwipeOffset =
+                                                                nextOffset;
+                                                            _showSwipeEndCap =
+                                                                nextOffset > 0;
+                                                          });
+                                                        },
+                                                    onHorizontalDragEnd: (details) {
                                                       final double velocity =
-                                                          details.primaryVelocity ??
-                                                              0;
+                                                          details
+                                                              .primaryVelocity ??
+                                                          0;
                                                       final double
-                                                          projectedPosition =
+                                                      projectedPosition =
                                                           _payoutSwipeOffset +
-                                                              (velocity * 0.2);
+                                                          (velocity * 0.2);
                                                       bool shouldSnapToEnd =
                                                           projectedPosition >=
-                                                              snapThreshold;
+                                                          snapThreshold;
                                                       if (_payoutSwipeOffset >=
                                                               snapThreshold &&
                                                           velocity > -500) {
@@ -1955,9 +2022,11 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               .easeOutCubic,
                                                         );
                                                       } else {
-                                                        _animateSwipeTo(0,
-                                                            curve: Curves
-                                                                .easeOutCubic);
+                                                        _animateSwipeTo(
+                                                          0,
+                                                          curve: Curves
+                                                              .easeOutCubic,
+                                                        );
                                                       }
                                                     },
                                                     onHorizontalDragCancel: () {
@@ -1972,28 +2041,31 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               .easeOutCubic,
                                                         );
                                                       } else {
-                                                        _animateSwipeTo(0,
-                                                            curve: Curves
-                                                                .easeOutCubic);
+                                                        _animateSwipeTo(
+                                                          0,
+                                                          curve: Curves
+                                                              .easeOutCubic,
+                                                        );
                                                       }
                                                     },
                                                     child: ClipRRect(
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                              s(15)),
+                                                            s(15),
+                                                          ),
                                                       child: Stack(
                                                         fit: StackFit.expand,
                                                         alignment:
                                                             Alignment.center,
                                                         children: [
                                                           ColoredBox(
-                                                            color: HSLColor
-                                                                    .fromAHSL(
-                                                                        0.3,
-                                                                        211,
-                                                                        1.0,
-                                                                        0.50)
-                                                                .toColor(),
+                                                            color:
+                                                                HSLColor.fromAHSL(
+                                                                  0.3,
+                                                                  211,
+                                                                  1.0,
+                                                                  0.50,
+                                                                ).toColor(),
                                                           ),
                                                           if (trailWidth > 0)
                                                             Positioned(
@@ -2005,10 +2077,10 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                     trailWidth,
                                                                 height: double
                                                                     .infinity,
-                                                                child:
-                                                                    const ColoredBox(
+                                                                child: const ColoredBox(
                                                                   color: Color(
-                                                                      0xFF007AFF),
+                                                                    0xFF007AFF,
+                                                                  ),
                                                                 ),
                                                               ),
                                                             ),
@@ -2016,22 +2088,19 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                             right: 0,
                                                             top: 0,
                                                             bottom: 0,
-                                                            child:
-                                                                IgnorePointer(
+                                                            child: IgnorePointer(
                                                               ignoring:
                                                                   !_showSwipeEndCap,
-                                                              child:
-                                                                  AnimatedOpacity(
+                                                              child: AnimatedOpacity(
                                                                 opacity:
                                                                     _showSwipeEndCap
-                                                                        ? 1
-                                                                        : 0,
-                                                                duration:
-                                                                    Duration(
+                                                                    ? 1
+                                                                    : 0,
+                                                                duration: Duration(
                                                                   milliseconds:
                                                                       _showSwipeEndCap
-                                                                          ? 160
-                                                                          : 80,
+                                                                      ? 160
+                                                                      : 80,
                                                                 ),
                                                                 curve: Curves
                                                                     .easeInOut,
@@ -2040,27 +2109,29 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                       handleWidth,
                                                                   height: double
                                                                       .infinity,
-                                                                  child:
-                                                                      DecoratedBox(
-                                                                    decoration:
-                                                                        BoxDecoration(
+                                                                  child: DecoratedBox(
+                                                                    decoration: BoxDecoration(
                                                                       color: HSLColor.fromAHSL(
-                                                                              0.3,
-                                                                              211,
-                                                                              1.0,
-                                                                              0.50)
-                                                                          .toColor(),
-                                                                      border:
-                                                                          Border
-                                                                              .all(
+                                                                        0.3,
+                                                                        211,
+                                                                        1.0,
+                                                                        0.50,
+                                                                      ).toColor(),
+                                                                      border: Border.all(
                                                                         color: const Color(
-                                                                            0xFFCCCCCC),
+                                                                          0xFFCCCCCC,
+                                                                        ),
                                                                         width:
-                                                                            s(1),
+                                                                            s(
+                                                                              1,
+                                                                            ),
                                                                       ),
                                                                       borderRadius:
                                                                           BorderRadius.circular(
-                                                                              s(15)),
+                                                                            s(
+                                                                              15,
+                                                                            ),
+                                                                          ),
                                                                     ),
                                                                   ),
                                                                 ),
@@ -2074,12 +2145,13 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                 textAlign:
                                                                     TextAlign
                                                                         .center,
-                                                                style:
-                                                                    TextStyle(
+                                                                style: TextStyle(
                                                                   color: const Color(
-                                                                      0xFF4DAAFC),
-                                                                  fontSize:
-                                                                      s(16),
+                                                                    0xFF4DAAFC,
+                                                                  ),
+                                                                  fontSize: s(
+                                                                    16,
+                                                                  ),
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .bold,
@@ -2092,17 +2164,18 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               child: ClipRect(
                                                                 clipper:
                                                                     _SwipeTrailClipper(
-                                                                        trailWidth),
+                                                                      trailWidth,
+                                                                    ),
                                                                 child: Center(
                                                                   child: Text(
                                                                     'Wischen zum Auszahlen',
                                                                     textAlign:
                                                                         TextAlign
                                                                             .center,
-                                                                    style:
-                                                                        TextStyle(
+                                                                    style: TextStyle(
                                                                       color: const Color(
-                                                                          0xFFF2F2F2),
+                                                                        0xFFF2F2F2,
+                                                                      ),
                                                                       fontSize:
                                                                           s(16),
                                                                       fontWeight:
@@ -2123,51 +2196,62 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               height: double
                                                                   .infinity,
                                                               child: Container(
-                                                                decoration:
-                                                                    BoxDecoration(
+                                                                decoration: BoxDecoration(
                                                                   color: const Color(
-                                                                      0xFFD9D9D9),
+                                                                    0xFFD9D9D9,
+                                                                  ),
                                                                   boxShadow:
                                                                       _payoutSwipeOffset >
-                                                                              0
-                                                                          ? [
-                                                                              BoxShadow(
-                                                                                color: HSLColor.fromAHSL(0.25, 0, 0, 0).toColor(),
-                                                                                offset: Offset(-s(3), 0),
-                                                                                blurRadius: s(4),
-                                                                                spreadRadius: 0,
+                                                                          0
+                                                                      ? [
+                                                                          BoxShadow(
+                                                                            color: HSLColor.fromAHSL(
+                                                                              0.25,
+                                                                              0,
+                                                                              0,
+                                                                              0,
+                                                                            ).toColor(),
+                                                                            offset: Offset(
+                                                                              -s(
+                                                                                3,
                                                                               ),
-                                                                            ]
-                                                                          : [],
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .only(
-                                                                    topLeft: Radius
-                                                                        .circular(
-                                                                      handleCornerRadius,
-                                                                    ),
+                                                                              0,
+                                                                            ),
+                                                                            blurRadius: s(
+                                                                              4,
+                                                                            ),
+                                                                            spreadRadius:
+                                                                                0,
+                                                                          ),
+                                                                        ]
+                                                                      : [],
+                                                                  borderRadius: BorderRadius.only(
+                                                                    topLeft:
+                                                                        Radius.circular(
+                                                                          handleCornerRadius,
+                                                                        ),
                                                                     bottomLeft:
-                                                                        Radius
-                                                                            .circular(
-                                                                      handleCornerRadius,
-                                                                    ),
-                                                                    topRight: Radius
-                                                                        .circular(
-                                                                      rightCornerRadius,
-                                                                    ),
+                                                                        Radius.circular(
+                                                                          handleCornerRadius,
+                                                                        ),
+                                                                    topRight:
+                                                                        Radius.circular(
+                                                                          rightCornerRadius,
+                                                                        ),
                                                                     bottomRight:
-                                                                        Radius
-                                                                            .circular(
-                                                                      rightCornerRadius,
-                                                                    ),
+                                                                        Radius.circular(
+                                                                          rightCornerRadius,
+                                                                        ),
                                                                   ),
                                                                 ),
                                                                 alignment: Alignment
                                                                     .centerRight,
-                                                                padding: EdgeInsets
-                                                                    .only(
-                                                                        right: s(
-                                                                            15)),
+                                                                padding:
+                                                                    EdgeInsets.only(
+                                                                      right: s(
+                                                                        15,
+                                                                      ),
+                                                                    ),
                                                                 child: Row(
                                                                   mainAxisSize:
                                                                       MainAxisSize
@@ -2176,41 +2260,47 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                     ScaleTransition(
                                                                       scale:
                                                                           _firstSwipeChevronScale,
-                                                                      child: SFSymbolHelper
-                                                                          .getIcon(
+                                                                      child: SFSymbolHelper.getIcon(
                                                                         iconPath:
                                                                             'assets/icons/chevron.right.svg',
                                                                         width: s(
-                                                                            15),
+                                                                          15,
+                                                                        ),
                                                                         height:
-                                                                            s(15),
+                                                                            s(
+                                                                              15,
+                                                                            ),
                                                                         color: HSLColor.fromAHSL(
-                                                                                0.59,
-                                                                                0,
-                                                                                0,
-                                                                                0.22)
-                                                                            .toColor(),
+                                                                          0.59,
+                                                                          0,
+                                                                          0,
+                                                                          0.22,
+                                                                        ).toColor(),
                                                                       ),
                                                                     ),
-                                                                    Transform
-                                                                        .translate(
-                                                                      offset: Offset(
-                                                                          -s(4),
-                                                                          0),
-                                                                      child:
-                                                                          ScaleTransition(
+                                                                    Transform.translate(
+                                                                      offset:
+                                                                          Offset(
+                                                                            -s(
+                                                                              4,
+                                                                            ),
+                                                                            0,
+                                                                          ),
+                                                                      child: ScaleTransition(
                                                                         scale:
                                                                             _secondSwipeChevronScale,
-                                                                        child: SFSymbolHelper
-                                                                            .getIcon(
+                                                                        child: SFSymbolHelper.getIcon(
                                                                           iconPath:
                                                                               'assets/icons/chevron.right.svg',
-                                                                          width:
-                                                                              s(15),
-                                                                          height:
-                                                                              s(15),
-                                                                          color:
-                                                                              const Color(0xFF1A1A1A),
+                                                                          width: s(
+                                                                            15,
+                                                                          ),
+                                                                          height: s(
+                                                                            15,
+                                                                          ),
+                                                                          color: const Color(
+                                                                            0xFF1A1A1A,
+                                                                          ),
                                                                         ),
                                                                       ),
                                                                     ),
@@ -2222,16 +2312,14 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                           if (_isPayoutProcessing)
                                                             Positioned.fill(
                                                               child: Center(
-                                                                child: SizedBox
-                                                                    .square(
-                                                                  dimension:
-                                                                      s(22),
-                                                                  child:
-                                                                      CircularProgressIndicator(
+                                                                child: SizedBox.square(
+                                                                  dimension: s(
+                                                                    22,
+                                                                  ),
+                                                                  child: CircularProgressIndicator(
                                                                     strokeWidth:
                                                                         s(2.5),
-                                                                    color:
-                                                                        const Color(
+                                                                    color: const Color(
                                                                       0xFFF2F2F2,
                                                                     ),
                                                                   ),
@@ -2264,14 +2352,16 @@ class _PaymentsPageState extends State<PaymentsPage>
                                             },
                                             child: ConstrainedBox(
                                               constraints: const BoxConstraints(
-                                                  minHeight: 44),
+                                                minHeight: 44,
+                                              ),
                                               child: Align(
                                                 alignment: Alignment.centerLeft,
                                                 child: Text(
                                                   'Auszahlungshistorie ansehen',
                                                   style: TextStyle(
-                                                    color:
-                                                        const Color(0xFFB3B3B3),
+                                                    color: const Color(
+                                                      0xFFB3B3B3,
+                                                    ),
                                                     fontSize: s(16),
                                                     fontWeight:
                                                         FontWeight.normal,
@@ -2295,10 +2385,7 @@ class _PaymentsPageState extends State<PaymentsPage>
                         );
                       },
                     )
-                  : _PaymentsPageSkeleton(
-                      s: s,
-                      isDark: isDark,
-                    ),
+                  : _PaymentsPageSkeleton(s: s, isDark: isDark),
             ),
           ),
         ),
@@ -2307,9 +2394,7 @@ class _PaymentsPageState extends State<PaymentsPage>
             child: AnimatedOpacity(
               duration: const Duration(milliseconds: 160),
               opacity: _isPayoutProcessing ? 1 : 0,
-              child: const ColoredBox(
-                color: Color(0x33000000),
-              ),
+              child: const ColoredBox(color: Color(0x33000000)),
             ),
           ),
         ),
@@ -2319,10 +2404,7 @@ class _PaymentsPageState extends State<PaymentsPage>
 }
 
 class _PaymentsPageSkeleton extends StatelessWidget {
-  const _PaymentsPageSkeleton({
-    required this.s,
-    required this.isDark,
-  });
+  const _PaymentsPageSkeleton({required this.s, required this.isDark});
 
   final double Function(double) s;
   final bool isDark;
@@ -2333,12 +2415,7 @@ class _PaymentsPageSkeleton extends StatelessWidget {
       axisDirection: AxisDirection.down,
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          s(16),
-          0,
-          s(16),
-          s(20),
-        ),
+        padding: EdgeInsets.fromLTRB(s(16), 0, s(16), s(20)),
         children: [
           SizedBox(height: s(26)),
           ProfileDetailSkeletonBlock(
@@ -2415,12 +2492,7 @@ class _PaymentsWarmupPhaseOnePage extends StatelessWidget {
           axisDirection: AxisDirection.down,
           child: ListView(
             physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              s(16),
-              0,
-              s(16),
-              s(20),
-            ),
+            padding: EdgeInsets.fromLTRB(s(16), 0, s(16), s(20)),
             children: [
               SizedBox(height: s(26)),
               Text(
@@ -2510,12 +2582,7 @@ class _PaymentsWarmupPhaseTwoPage extends StatelessWidget {
           axisDirection: AxisDirection.down,
           child: ListView(
             physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.fromLTRB(
-              s(16),
-              0,
-              s(16),
-              s(20),
-            ),
+            padding: EdgeInsets.fromLTRB(s(16), 0, s(16), s(20)),
             children: [
               SizedBox(height: s(26)),
               Text(
@@ -2729,7 +2796,9 @@ class _StatusCircle extends StatelessWidget {
             width: size,
             height: size,
             decoration: const BoxDecoration(
-                color: Color(0xFFE6E6E6), shape: BoxShape.circle),
+              color: Color(0xFFE6E6E6),
+              shape: BoxShape.circle,
+            ),
             alignment: Alignment.center,
             child: child,
           ),
@@ -2747,8 +2816,9 @@ class _StatusCircle extends StatelessWidget {
                   width: backgroundCircleSize,
                   height: backgroundCircleSize,
                   decoration: const BoxDecoration(
-                    color:
-                        Color(0xFF020202), // Hintergrundfarbe für den Cut-out
+                    color: Color(
+                      0xFF020202,
+                    ), // Hintergrundfarbe für den Cut-out
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center, // Macht das Icon "nested"
@@ -2795,10 +2865,8 @@ class _PayoutButton extends StatelessWidget {
         duration: const Duration(milliseconds: 320),
         switchInCurve: Curves.easeIn,
         switchOutCurve: Curves.easeOut,
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
         child: SizedBox(
           key: ValueKey<bool>(isSelected),
           width: width,

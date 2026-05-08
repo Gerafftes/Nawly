@@ -212,6 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final double bottomNavHeight = s(64);
     final double profileBottomGap = s(19);
     final double profileBottomBoxHeight = s(116);
+    final double appBarTitleWidth = s(280);
     final Color bgColor = isDark
         ? const Color(0xFF020202)
         : const Color(0xFFE6E6E6);
@@ -244,7 +245,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final SystemUiOverlayStyle overlayStyle = isDark
         ? SystemUiOverlayStyle.light
         : SystemUiOverlayStyle.dark;
-    final bool showAppBarChrome = _bottomNavIndex != _profileTabIndex;
+    final bool showBellButton =
+        _bottomNavIndex != _activityTabIndex &&
+        _bottomNavIndex != _profileTabIndex &&
+        _bottomNavIndex != _createTabIndex;
+    final bool showCreateTitle = _bottomNavIndex == _createTabIndex;
+    final bool showBrandTitle =
+        _bottomNavIndex != _profileTabIndex && !showCreateTitle;
+    final bool showAppBarChrome =
+        showBellButton || showBrandTitle || showCreateTitle;
 
     Widget content;
     switch (selectedIndex) {
@@ -288,6 +297,7 @@ class _HomeScreenState extends State<HomeScreen> {
         jobButtonColor: jobButtonColor,
         timeTextColor: timeTextColor,
         buttonTextColor: buttonTextColor,
+        scrollBottomPadding: bottomNavHeight + bottomInset,
       );
     }
 
@@ -325,8 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       HomeActionButton(
-                        iconPath:
-                            'assets/icons/wrench.and.screwdriver.fill.svg',
+                        iconPath: 'assets/icons/briefcase.fill.svg',
                         label: 'Jobs finden',
                         color: selectedIndex == 0 ? cardColorActive : cardColor,
                         onTap: () => setState(() => selectedIndex = 0),
@@ -448,14 +457,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           );
         case _createTabIndex:
-          return withPullToRefresh(
-            buildCreateContent(),
+          return Padding(
             padding: EdgeInsets.only(
               top: topBarInset,
-              bottom: s(92),
               left: s(16),
               right: s(16),
             ),
+            child: SizedBox.expand(child: buildCreateContent()),
           );
         case _notificationsTabIndex:
           return Center(
@@ -515,9 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             child: child,
           ),
-          child:
-              _bottomNavIndex == _activityTabIndex ||
-                  _bottomNavIndex == _profileTabIndex
+          child: !showBellButton
               ? const SizedBox(key: ValueKey<String>('appbar-no-bell'))
               : IconButton(
                   key: const ValueKey<String>('appbar-bell'),
@@ -558,35 +564,56 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
         ),
-        title: AnimatedSwitcher(
-          duration: _tabFadeInDuration,
-          reverseDuration: _tabFadeOutDuration,
-          switchInCurve: Curves.easeIn,
-          switchOutCurve: Curves.easeOut,
-          layoutBuilder: (currentChild, previousChildren) {
-            return Stack(
-              alignment: Alignment.center,
-              children: [...previousChildren, ?currentChild],
-            );
-          },
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
+        title: SizedBox(
+          width: appBarTitleWidth,
+          height: kToolbarHeight,
+          child: AnimatedSwitcher(
+            duration: _tabFadeInDuration,
+            reverseDuration: _tabFadeOutDuration,
+            switchInCurve: Curves.easeIn,
+            switchOutCurve: Curves.easeOut,
+            layoutBuilder: (currentChild, previousChildren) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  for (final child in previousChildren) Center(child: child),
+                  if (currentChild != null) Center(child: currentChild),
+                ],
+              );
+            },
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ),
+              child: child,
             ),
-            child: child,
-          ),
-          child: _bottomNavIndex == _profileTabIndex
-              ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
-              : Text(
-                  'MiniJobNow',
-                  key: const ValueKey<String>('appbar-title'),
-                  style: TextStyle(
-                    color: textColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: s(28),
+            child: showCreateTitle
+                ? Text(
+                    'Was möchtest du erstellen?',
+                    key: const ValueKey<String>('appbar-create-title'),
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: s(20),
+                    ),
+                  )
+                : !showBrandTitle
+                ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
+                : Text(
+                    'MiniJobNow',
+                    key: const ValueKey<String>('appbar-title'),
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: s(28),
+                    ),
                   ),
-                ),
+          ),
         ),
         centerTitle: true,
       ),
@@ -674,7 +701,12 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'Aktivität',
               systemImage: 'list.bullet.rectangle.portrait.fill',
             ),
-            AppleLiquidTabItem(title: 'Profil', systemImage: 'person.fill'),
+            AppleLiquidTabItem(
+              title: 'Profil',
+              systemImage: 'person.fill',
+              notificationDotColor: Color(0xFF007AFF),
+              notificationBadgeValue: '3',
+            ),
           ],
           searchItem: const AppleLiquidTabItem(
             title: 'Erstellen',

@@ -53,6 +53,10 @@ class SFSymbolHelper {
           name: 'storefront.fill',
           fallbackIcon: Icons.storefront_rounded,
         ),
+    'assets/icons/briefcase.fill.svg': _SFSymbolIconDefinition(
+      name: 'briefcase.fill',
+      fallbackIcon: Icons.work_rounded,
+    ),
     'assets/icons/circle.grid.3x3.fill.svg': _SFSymbolIconDefinition(
       name: 'circle.grid.3x3.fill',
       fallbackIcon: CupertinoIcons.circle_grid_3x3_fill,
@@ -69,7 +73,7 @@ class SFSymbolHelper {
       name: 'plus.circle.fill',
       fallbackIcon: CupertinoIcons.plus_circle_fill,
     ),
-    'assets/icons/square.and.pencil.circle.fill.svg': _SFSymbolIconDefinition(
+    'square.and.pencil.circle.fill': _SFSymbolIconDefinition(
       name: 'square.and.pencil.circle.fill',
       fallbackIcon: CupertinoIcons.square_pencil,
     ),
@@ -277,6 +281,8 @@ class SFSymbolHelper {
         return Icons.apple;
       case 'storefront.fill':
         return Icons.storefront_rounded;
+      case 'briefcase.fill':
+        return Icons.work_rounded;
       case 'wrench.and.screwdriver':
       case 'wrench.and.screwdriver.fill':
         return CupertinoIcons.wrench;

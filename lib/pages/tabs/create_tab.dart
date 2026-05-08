@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../services/ui_scale.dart';
 
 class CreateTabContent extends StatefulWidget {
@@ -10,6 +11,7 @@ class CreateTabContent extends StatefulWidget {
   final Color jobButtonColor;
   final Color timeTextColor;
   final Color buttonTextColor;
+  final double scrollBottomPadding;
 
   const CreateTabContent({
     super.key,
@@ -21,6 +23,7 @@ class CreateTabContent extends StatefulWidget {
     required this.jobButtonColor,
     required this.timeTextColor,
     required this.buttonTextColor,
+    required this.scrollBottomPadding,
   });
 
   @override
@@ -32,54 +35,148 @@ class _CreateTabContentState extends State<CreateTabContent> {
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
-    final Size screenSize = MediaQuery.of(context).size;
-    final double screenWidth = screenSize.width;
 
-    final double cornerRadius = screenWidth * 0.04;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.fromLTRB(s(15), s(15), s(15), s(15)),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(cornerRadius),
-            border: Border.all(color: widget.borderColor, width: s(2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Job oder Service?',
-                textHeightBehavior: const TextHeightBehavior(
-                  applyHeightToFirstAscent: false,
-                  applyHeightToLastDescent: false,
-                ),
-                style: TextStyle(
-                  color: widget.textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: s(20),
-                  height: 1,
+    Widget createCard({
+      required String title,
+      required String description,
+      required String buttonText,
+    }) {
+      return SizedBox(
+        height: s(210),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D0D0D),
+                  borderRadius: BorderRadius.circular(s(24)),
                 ),
               ),
-              SizedBox(height: s(8)),
-              Text(
-                'Ein Job ist einmalig. Ein Service ist dauerhaft buchbar.',
-                textHeightBehavior: const TextHeightBehavior(
-                  applyHeightToFirstAscent: false,
-                  applyHeightToLastDescent: false,
-                ),
-                style: TextStyle(
-                  color: widget.secondaryText,
-                  fontSize: s(15),
-                  height: 1.4,
+            ),
+            Positioned(
+              left: s(18),
+              top: s(11),
+              child: Container(
+                width: s(52),
+                height: s(52),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF141414),
+                  borderRadius: BorderRadius.circular(s(9)),
                 ),
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              left: s(85),
+              right: s(18),
+              top: s(15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: const Color(0xFFF2F2F2),
+                      fontSize: s(21),
+                      fontWeight: FontWeight.bold,
+                      height: 1,
+                    ),
+                  ),
+                  SizedBox(height: s(10)),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: const Color(0xFFB3B3B3),
+                      fontSize: s(13),
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SizedBox(
+                height: s(60),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF007AFF),
+                    foregroundColor: const Color(0xFFF2F2F2),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(s(24)),
+                    ),
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size(double.infinity, s(60)),
+                    elevation: 0,
+                  ),
+                  onPressed: HapticFeedback.selectionClick,
+                  child: SizedBox.expand(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Text(
+                          buttonText,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: const Color(0xFFF2F2F2),
+                            fontSize: s(17),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Positioned(
+                          right: s(30),
+                          child: Icon(
+                            Icons.chevron_right,
+                            color: const Color(0xFFF2F2F2),
+                            size: s(24),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      );
+    }
+
+    return StretchingOverscrollIndicator(
+      axisDirection: AxisDirection.down,
+      child: SingleChildScrollView(
+        primary: false,
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        padding: EdgeInsets.only(bottom: widget.scrollBottomPadding),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(height: s(26)),
+            createCard(
+              title: 'Einmaliger Job',
+              description:
+                  'Erstelle einen konkreten Auftrag damit ihn andere für dich erledigen.',
+              buttonText: 'Einmaligen Job erstellen',
+            ),
+            SizedBox(height: s(29)),
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: s(16)),
+              height: 1,
+              color: const Color(0xFF1B1B1B),
+            ),
+            SizedBox(height: s(29)),
+            createCard(
+              title: 'Dauerhafter Service',
+              description: 'Biete einen Service an den andere buchen können.',
+              buttonText: 'Service anbieten',
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

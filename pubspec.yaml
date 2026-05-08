@@ -16,7 +16,7 @@ dependencies:
   shared_preferences: ^2.5.4
   sensors_plus: ^7.0.0
   flutter_native_splash: ^2.4.7
-  mjn_liquid_ui: ^0.1.9
+  mjn_liquid_ui: ^0.2.0
   intl: ^0.20.2
   dropdown_button2: ^2.3.9
 
@@ -30,24 +30,6 @@ flutter:
 
   assets:
     - assets/icons/
-    - assets/icons/wrench.and.screwdriver.fill.svg
-    - assets/icons/plus.svg
-    - assets/icons/plus.circle.fill.svg
-    - assets/icons/PayPal.svg
-    - assets/icons/headset.svg
-    - assets/icons/list.bullet.rectangle.portrait.fill.svg
-    - assets/icons/person.circle.fill.svg
-    - assets/icons/bell.fill.svg
-    - assets/icons/checkmark.seal.fill.svg
-    - assets/icons/lock.shield.fill.svg
-    - assets/icons/creditcard.fill.svg
-    - assets/icons/scroll.fill.svg
-    - assets/icons/circle.grid.3x3.fill.svg
-    - assets/icons/clock.arrow.trianglehead.counterclockwise.rotate.90.svg
-    - assets/icons/apple.logo.svg
-    - assets/icons/logo.png
-    - assets/icons/branding.png
-    - assets/icons/close.svg
 
 flutter_native_splash:
   android: true
