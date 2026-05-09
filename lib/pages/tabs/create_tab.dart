@@ -31,6 +31,17 @@ class CreateTabContent extends StatefulWidget {
 }
 
 class _CreateTabContentState extends State<CreateTabContent> {
+  bool _isCreateButtonPressed = false;
+
+  void _setCreateButtonPressed(bool value) {
+    if (_isCreateButtonPressed == value) {
+      return;
+    }
+    setState(() {
+      _isCreateButtonPressed = value;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
@@ -100,40 +111,45 @@ class _CreateTabContentState extends State<CreateTabContent> {
               bottom: 0,
               child: SizedBox(
                 height: s(60),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF007AFF),
-                    foregroundColor: const Color(0xFFF2F2F2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(s(24)),
+                child: Listener(
+                  onPointerDown: (_) => _setCreateButtonPressed(true),
+                  onPointerUp: (_) => _setCreateButtonPressed(false),
+                  onPointerCancel: (_) => _setCreateButtonPressed(false),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF007AFF),
+                      foregroundColor: const Color(0xFFF2F2F2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(s(24)),
+                      ),
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size(double.infinity, s(60)),
+                      elevation: 0,
                     ),
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size(double.infinity, s(60)),
-                    elevation: 0,
-                  ),
-                  onPressed: HapticFeedback.selectionClick,
-                  child: SizedBox.expand(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Text(
-                          buttonText,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: const Color(0xFFF2F2F2),
-                            fontSize: s(17),
-                            fontWeight: FontWeight.bold,
+                    onPressed: HapticFeedback.selectionClick,
+                    child: SizedBox.expand(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Text(
+                            buttonText,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: const Color(0xFFF2F2F2),
+                              fontSize: s(17),
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                        ),
-                        Positioned(
-                          right: s(30),
-                          child: Icon(
-                            Icons.chevron_right,
-                            color: const Color(0xFFF2F2F2),
-                            size: s(24),
+                          Positioned(
+                            right: s(30),
+                            child: Icon(
+                              Icons.chevron_right,
+                              color: const Color(0xFFF2F2F2),
+                              size: s(24),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -148,9 +164,11 @@ class _CreateTabContentState extends State<CreateTabContent> {
       axisDirection: AxisDirection.down,
       child: SingleChildScrollView(
         primary: false,
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
-        ),
+        physics: _isCreateButtonPressed
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
         padding: EdgeInsets.only(bottom: widget.scrollBottomPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

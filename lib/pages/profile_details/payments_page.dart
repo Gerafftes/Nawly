@@ -54,9 +54,6 @@ class _PaymentsPageState extends State<PaymentsPage>
   int? _standardPayoutIndex;
   int? _selectedPaymentMethodIndex;
   Timer? _paymentMethodPressTimer;
-  final LayerLink _paymentMethodHintPopoverLink = LayerLink();
-  final OverlayPortalController _paymentMethodHintPopoverController =
-      OverlayPortalController(debugLabel: 'payment_method_hint_popover');
 
   static const List<_PaymentMethodData> _paymentMethods = [
     _PaymentMethodData(
@@ -271,17 +268,11 @@ class _PaymentsPageState extends State<PaymentsPage>
               }
             }
           });
-    if (!widget.prewarm) {
-      _paymentMethodHintPopoverController.show();
-    }
   }
 
   @override
   void dispose() {
     _paymentMethodPressTimer?.cancel();
-    if (_paymentMethodHintPopoverController.isShowing) {
-      _paymentMethodHintPopoverController.hide();
-    }
     _swipeChevronScaleController.dispose();
     _swipeSnapController.dispose();
     super.dispose();
@@ -1043,89 +1034,80 @@ class _PaymentsPageState extends State<PaymentsPage>
                             paymentMethodHintContainerHeight +
                             paymentMethodHintBottomSpacing;
 
-                        Widget buildPaymentMethodHintPopover(
-                          BuildContext overlayContext,
-                        ) {
-                          return CompositedTransformFollower(
-                            link: _paymentMethodHintPopoverLink,
-                            showWhenUnlinked: false,
-                            targetAnchor: Alignment.bottomLeft,
-                            followerAnchor: Alignment.topLeft,
-                            offset: Offset(0, paymentMethodHintTopSpacing),
-                            child: IgnorePointer(
-                              child: AnimatedOpacity(
-                                opacity: _selectedPaymentMethodIndex == null
-                                    ? 1
-                                    : 0,
-                                duration: const Duration(milliseconds: 180),
-                                curve: Curves.easeInOut,
-                                child: SizedBox(
-                                  width: availableContentWidth,
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      SizedBox(
-                                        width: paymentMethodHintBoxWidth,
-                                        child: Container(
-                                          height:
-                                              paymentMethodHintContainerHeight,
-                                          alignment: Alignment.center,
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: hintHorizontalPadding,
-                                            vertical:
-                                                paymentMethodHintVerticalPadding,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF1A1A1A),
-                                            borderRadius: BorderRadius.circular(
-                                              s(9),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            paymentMethodHintText,
-                                            style: paymentMethodHintTextStyle,
-                                            maxLines: 1,
-                                            softWrap: false,
-                                            overflow: TextOverflow.visible,
-                                            textAlign: TextAlign.center,
-                                            strutStyle: StrutStyle(
-                                              fontSize:
-                                                  paymentMethodHintTextStyle
-                                                      .fontSize ??
-                                                  s(12),
-                                              height: 1,
-                                              forceStrutHeight: true,
-                                            ),
-                                            textHeightBehavior:
-                                                const TextHeightBehavior(
-                                                  applyHeightToFirstAscent:
-                                                      false,
-                                                  applyHeightToLastDescent:
-                                                      false,
-                                                ),
-                                          ),
+                        final Widget paymentMethodHintPopover = IgnorePointer(
+                          child: AnimatedOpacity(
+                            opacity: _selectedPaymentMethodIndex == null
+                                ? 1
+                                : 0,
+                            duration: const Duration(milliseconds: 180),
+                            curve: Curves.easeInOut,
+                            child: SizedBox(
+                              width: availableContentWidth,
+                              height: paymentMethodFooterHeight,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Positioned(
+                                    left: 0,
+                                    top: paymentMethodHintTopSpacing,
+                                    width: paymentMethodHintBoxWidth,
+                                    child: Container(
+                                      height: paymentMethodHintContainerHeight,
+                                      alignment: Alignment.center,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: hintHorizontalPadding,
+                                        vertical:
+                                            paymentMethodHintVerticalPadding,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1A1A1A),
+                                        borderRadius: BorderRadius.circular(
+                                          s(9),
                                         ),
                                       ),
-                                      Positioned(
-                                        left: paymentMethodTriangleLeft,
-                                        top: -paymentMethodTriangleSize,
-                                        child: CustomPaint(
-                                          size: Size(
-                                            paymentMethodTriangleSize,
-                                            paymentMethodTriangleSize,
-                                          ),
-                                          painter: const _TrianglePainter(
-                                            color: Color(0xFF1A1A1A),
-                                          ),
+                                      child: Text(
+                                        paymentMethodHintText,
+                                        style: paymentMethodHintTextStyle,
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        overflow: TextOverflow.visible,
+                                        textAlign: TextAlign.center,
+                                        strutStyle: StrutStyle(
+                                          fontSize:
+                                              paymentMethodHintTextStyle
+                                                  .fontSize ??
+                                              s(12),
+                                          height: 1,
+                                          forceStrutHeight: true,
                                         ),
+                                        textHeightBehavior:
+                                            const TextHeightBehavior(
+                                              applyHeightToFirstAscent: false,
+                                              applyHeightToLastDescent: false,
+                                            ),
                                       ),
-                                    ],
+                                    ),
                                   ),
-                                ),
+                                  Positioned(
+                                    left: paymentMethodTriangleLeft,
+                                    top:
+                                        paymentMethodHintTopSpacing -
+                                        paymentMethodTriangleSize,
+                                    child: CustomPaint(
+                                      size: Size(
+                                        paymentMethodTriangleSize,
+                                        paymentMethodTriangleSize,
+                                      ),
+                                      painter: const _TrianglePainter(
+                                        color: Color(0xFF1A1A1A),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        }
+                          ),
+                        );
 
                         return StretchingOverscrollIndicator(
                           axisDirection: AxisDirection.down,
@@ -1155,14 +1137,11 @@ class _PaymentsPageState extends State<PaymentsPage>
                                           ),
                                         ),
                                         SizedBox(height: s(16)),
-                                        OverlayPortal(
-                                          controller:
-                                              _paymentMethodHintPopoverController,
-                                          overlayChildBuilder:
-                                              buildPaymentMethodHintPopover,
-                                          child: CompositedTransformTarget(
-                                            link: _paymentMethodHintPopoverLink,
-                                            child: Row(
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            Row(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
@@ -1302,10 +1281,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                 ],
                                               ],
                                             ),
-                                          ),
-                                        ),
-                                        SizedBox(
-                                          height: paymentMethodFooterHeight,
+                                            paymentMethodHintPopover,
+                                          ],
                                         ),
                                         SizedBox(height: s(3)),
                                         Align(

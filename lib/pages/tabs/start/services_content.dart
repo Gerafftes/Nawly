@@ -30,56 +30,72 @@ class ServicesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
+    final double infoCardHeight = ui.s(104);
+    final double sectionHeaderHeight = ui.s(44);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.fromLTRB(ui.s(15), ui.s(15), ui.s(15), ui.s(15)),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(ui.s(15)),
-            border: Border.all(color: borderColor, width: ui.s(2)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Hilfe direkt buchen',
-                textHeightBehavior: const TextHeightBehavior(
-                  applyHeightToFirstAscent: false,
-                  applyHeightToLastDescent: false,
+        SizedBox(
+          height: infoCardHeight,
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.fromLTRB(
+              ui.s(15),
+              ui.s(15),
+              ui.s(15),
+              ui.s(15),
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(ui.s(15)),
+              border: Border.all(color: borderColor, width: ui.s(2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hilfe direkt buchen',
+                  textHeightBehavior: const TextHeightBehavior(
+                    applyHeightToFirstAscent: false,
+                    applyHeightToLastDescent: false,
+                  ),
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: ui.s(20),
+                    height: 1,
+                  ),
                 ),
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: ui.s(20),
-                  height: 1,
+                SizedBox(height: ui.s(8)),
+                Text(
+                  'Finde passende Hilfe in deiner Nähe und kontaktiere Anbieter direkt.',
+                  textHeightBehavior: const TextHeightBehavior(
+                    applyHeightToFirstAscent: false,
+                    applyHeightToLastDescent: false,
+                  ),
+                  style: TextStyle(
+                    color: secondaryText,
+                    fontSize: ui.s(15),
+                    height: 1.4,
+                  ),
                 ),
-              ),
-              SizedBox(height: ui.s(8)),
-              Text(
-                'Finde passende Hilfe in deiner Nähe und kontaktiere Anbieter direkt.',
-                textHeightBehavior: const TextHeightBehavior(
-                  applyHeightToFirstAscent: false,
-                  applyHeightToLastDescent: false,
-                ),
-                style: TextStyle(
-                  color: secondaryText,
-                  fontSize: ui.s(15),
-                  height: 1.4,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         SizedBox(height: ui.s(28)),
-        Text(
-          'In deiner Nähe',
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-            fontSize: ui.s(20),
+        SizedBox(
+          height: sectionHeaderHeight,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'In deiner Nähe',
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.bold,
+                fontSize: ui.s(20),
+              ),
+            ),
           ),
         ),
         SizedBox(height: ui.s(12)),

@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 const Duration kProfileDetailPushFadeDuration = Duration(milliseconds: 250);
 const Duration kProfileDetailPushAnimationTolerance = Duration(
   milliseconds: 48,
 );
+const double kProfileDetailBackgroundParallaxFraction = 0.35;
+const double _profileDetailBackGestureEdgeWidth = 34;
+const double _profileDetailBackGestureMinFlingVelocity = 420;
+
+final ValueNotifier<double> profileDetailBackgroundParallaxProgress =
+    ValueNotifier<double>(0);
+
+final Map<Object, double> _profileDetailRouteParallaxValues =
+    <Object, double>{};
+double? _pendingProfileDetailParallaxProgress;
+bool _hasScheduledProfileDetailParallaxPublish = false;
 
 Route<T> buildProfileDetailFadeRoute<T>({
   required Widget page,
@@ -12,24 +24,301 @@ Route<T> buildProfileDetailFadeRoute<T>({
   Duration? reverseTransitionDuration,
 }) {
   final String label = performanceLabel ?? page.runtimeType.toString();
-  return PageRouteBuilder<T>(
-    pageBuilder: (context, animation, secondaryAnimation) => page,
+  return _ProfileDetailSwipeBackRoute<T>(
+    page: page,
+    performanceLabel: label,
     transitionDuration: transitionDuration,
-    reverseTransitionDuration: reverseTransitionDuration ?? transitionDuration,
-    transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-        _ProfileDetailFadeRouteProbe(
-          performanceLabel: label,
-          animation: animation,
-          expectedDuration: transitionDuration,
-          child: FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            ),
+    reverseTransitionDuration: reverseTransitionDuration,
+  );
+}
+
+void _setProfileDetailRouteParallaxValue(Object owner, double value) {
+  _profileDetailRouteParallaxValues[owner] = value.clamp(0.0, 1.0);
+  _publishProfileDetailParallaxProgress();
+}
+
+void _removeProfileDetailRouteParallaxValue(Object owner) {
+  _profileDetailRouteParallaxValues.remove(owner);
+  _publishProfileDetailParallaxProgress();
+}
+
+void _publishProfileDetailParallaxProgress() {
+  double progress = 0;
+  for (final double value in _profileDetailRouteParallaxValues.values) {
+    if (value > progress) {
+      progress = value;
+    }
+  }
+
+  _setProfileDetailParallaxProgress(progress);
+}
+
+void _setProfileDetailParallaxProgress(double progress) {
+  if ((profileDetailBackgroundParallaxProgress.value - progress).abs() >
+      0.001) {
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      _pendingProfileDetailParallaxProgress = progress;
+      if (_hasScheduledProfileDetailParallaxPublish) {
+        return;
+      }
+
+      _hasScheduledProfileDetailParallaxPublish = true;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _hasScheduledProfileDetailParallaxPublish = false;
+        final double? pendingProgress = _pendingProfileDetailParallaxProgress;
+        _pendingProfileDetailParallaxProgress = null;
+        if (pendingProgress == null) {
+          return;
+        }
+        _setProfileDetailParallaxProgress(pendingProgress);
+      });
+      return;
+    }
+
+    profileDetailBackgroundParallaxProgress.value = progress;
+  }
+}
+
+class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
+  _ProfileDetailSwipeBackRoute({
+    required this.page,
+    required this.performanceLabel,
+    required Duration transitionDuration,
+    Duration? reverseTransitionDuration,
+  }) : _transitionDuration = transitionDuration,
+       _reverseTransitionDuration =
+           reverseTransitionDuration ?? transitionDuration;
+
+  final Widget page;
+  final String performanceLabel;
+  final Duration _transitionDuration;
+  final Duration _reverseTransitionDuration;
+  bool _isSwipeGestureActive = false;
+  bool _usesSwipeBackVisual = false;
+
+  @override
+  bool get opaque => true;
+
+  @override
+  bool get barrierDismissible => false;
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  Duration get transitionDuration => _transitionDuration;
+
+  @override
+  Duration get reverseTransitionDuration => _reverseTransitionDuration;
+
+  bool get canStartSwipeBack {
+    return isCurrent && (navigator?.canPop() ?? false);
+  }
+
+  void startSwipeBack() {
+    if (!canStartSwipeBack || controller == null) {
+      return;
+    }
+    _isSwipeGestureActive = true;
+    _usesSwipeBackVisual = true;
+    controller!.stop();
+  }
+
+  void updateSwipeBack(double primaryDelta, double width) {
+    if (!_isSwipeGestureActive || controller == null || width <= 0) {
+      return;
+    }
+    final double nextValue = controller!.value - (primaryDelta / width);
+    controller!.value = nextValue.clamp(0.0, 1.0);
+  }
+
+  void endSwipeBack(double primaryVelocity) {
+    final AnimationController? routeController = controller;
+    if (!_isSwipeGestureActive || routeController == null) {
+      return;
+    }
+
+    _isSwipeGestureActive = false;
+    final bool shouldPop =
+        primaryVelocity > _profileDetailBackGestureMinFlingVelocity ||
+        routeController.value < 0.5;
+
+    if (shouldPop) {
+      navigator?.pop();
+      return;
+    }
+
+    routeController
+        .animateTo(
+          1,
+          duration: _remainingGestureAnimationDuration(routeController.value),
+          curve: Curves.easeOutCubic,
+        )
+        .whenComplete(() {
+          if (routeController.value == 1) {
+            _usesSwipeBackVisual = false;
+          }
+        });
+  }
+
+  Duration _remainingGestureAnimationDuration(double currentValue) {
+    final int durationMs =
+        (transitionDuration.inMilliseconds * (1 - currentValue).clamp(0.0, 1.0))
+            .round();
+    return Duration(milliseconds: durationMs.clamp(120, 260));
+  }
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) {
+    return page;
+  }
+
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return _ProfileDetailRouteParallaxSync(
+      animation: animation,
+      child: _ProfileDetailFadeRouteProbe(
+        performanceLabel: performanceLabel,
+        animation: animation,
+        expectedDuration: transitionDuration,
+        child: _ProfileDetailSwipeBackGesture(
+          route: this,
+          child: AnimatedBuilder(
+            animation: animation,
             child: child,
+            builder: (context, child) {
+              final double width = MediaQuery.sizeOf(context).width;
+              final double animationValue = animation.value.clamp(0.0, 1.0);
+              final bool shouldTranslate =
+                  _usesSwipeBackVisual ||
+                  animation.status == AnimationStatus.reverse;
+              final double visualValue = shouldTranslate
+                  ? animationValue
+                  : Curves.easeInOut.transform(animationValue);
+
+              return Transform.translate(
+                offset: Offset(
+                  shouldTranslate ? width * (1 - visualValue) : 0,
+                  0,
+                ),
+                child: FadeTransition(
+                  opacity: AlwaysStoppedAnimation<double>(visualValue),
+                  child: child,
+                ),
+              );
+            },
           ),
         ),
-  );
+      ),
+    );
+  }
+}
+
+class _ProfileDetailRouteParallaxSync extends StatefulWidget {
+  const _ProfileDetailRouteParallaxSync({
+    required this.animation,
+    required this.child,
+  });
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  State<_ProfileDetailRouteParallaxSync> createState() =>
+      _ProfileDetailRouteParallaxSyncState();
+}
+
+class _ProfileDetailRouteParallaxSyncState
+    extends State<_ProfileDetailRouteParallaxSync> {
+  final Object _owner = Object();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.animation.addListener(_syncProgress);
+    _syncProgress();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProfileDetailRouteParallaxSync oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.animation == widget.animation) {
+      return;
+    }
+    oldWidget.animation.removeListener(_syncProgress);
+    widget.animation.addListener(_syncProgress);
+    _syncProgress();
+  }
+
+  void _syncProgress() {
+    _setProfileDetailRouteParallaxValue(_owner, widget.animation.value);
+  }
+
+  @override
+  void dispose() {
+    widget.animation.removeListener(_syncProgress);
+    _removeProfileDetailRouteParallaxValue(_owner);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}
+
+class _ProfileDetailSwipeBackGesture extends StatelessWidget {
+  const _ProfileDetailSwipeBackGesture({
+    required this.route,
+    required this.child,
+  });
+
+  final _ProfileDetailSwipeBackRoute<dynamic> route;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        Positioned(
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: _profileDetailBackGestureEdgeWidth,
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onHorizontalDragStart: (_) => route.startSwipeBack(),
+            onHorizontalDragUpdate: (details) {
+              route.updateSwipeBack(
+                details.primaryDelta ?? 0,
+                MediaQuery.sizeOf(context).width,
+              );
+            },
+            onHorizontalDragEnd: (details) {
+              route.endSwipeBack(details.primaryVelocity ?? 0);
+            },
+            onHorizontalDragCancel: () => route.endSwipeBack(0),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class ProfileDetailWarmupRegistry {
