@@ -426,51 +426,55 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: child,
               );
             },
-            child: Stack(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(
-                    top: viewPadding.top,
-                    left: s(16),
-                    right: s(16),
-                  ),
-                  child: SizedBox.expand(
-                    child: RepaintBoundary(
-                      child: ProfileTabContent(
-                        textColor: textColor,
-                        headerTopInset: profileHeaderTopInset,
-                        isDark: isDark,
-                        scrollBottomPadding:
-                            bottomNavHeight + bottomInset + profileBottomExtra,
-                        onOpenDetailPage: _pushWithFade,
+            child: ProfileDetailSwipeReopenGesture(
+              child: Stack(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                      top: viewPadding.top,
+                      left: s(16),
+                      right: s(16),
+                    ),
+                    child: SizedBox.expand(
+                      child: RepaintBoundary(
+                        child: ProfileTabContent(
+                          textColor: textColor,
+                          headerTopInset: profileHeaderTopInset,
+                          isDark: isDark,
+                          scrollBottomPadding:
+                              bottomNavHeight +
+                              bottomInset +
+                              profileBottomExtra,
+                          onOpenDetailPage: _pushWithFade,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (_showProfileInfoBox)
-                  Positioned(
-                    left: viewPadding.left + s(16),
-                    right: viewPadding.right + s(16),
-                    bottom: bottomNavHeight + bottomInset + profileBottomGap,
-                    child: RepaintBoundary(
-                      child: _ProfileVerificationInfoBox(
-                        isDark: isDark,
-                        useGlassEffects: true,
-                        s: s,
-                        onDismiss: () {
-                          setState(() {
-                            _showProfileInfoBox = false;
-                          });
-                        },
-                        onVerifyNow: () {
-                          _pushWithFade(
-                            VerificationPage(isDarkOverride: isDark),
-                          );
-                        },
+                  if (_showProfileInfoBox)
+                    Positioned(
+                      left: viewPadding.left + s(16),
+                      right: viewPadding.right + s(16),
+                      bottom: bottomNavHeight + bottomInset + profileBottomGap,
+                      child: RepaintBoundary(
+                        child: _ProfileVerificationInfoBox(
+                          isDark: isDark,
+                          useGlassEffects: true,
+                          s: s,
+                          onDismiss: () {
+                            setState(() {
+                              _showProfileInfoBox = false;
+                            });
+                          },
+                          onVerifyNow: () {
+                            _pushWithFade(
+                              VerificationPage(isDarkOverride: isDark),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           );
         case _createTabIndex:

@@ -46,7 +46,6 @@ class _PaymentsPageState extends State<PaymentsPage>
     'assets/icons/checkmark.circle.fill.svg',
     'assets/icons/plus.circle.fill.svg',
     'assets/icons/checkmark.seal.fill.svg',
-    'assets/icons/chevron.right.svg',
   };
 
   int _selectedPayoutIndex = 0;
@@ -2271,51 +2270,60 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                             .centerRight,
                                                                     padding:
                                                                         EdgeInsets.only(
-                                                                          right: s(
-                                                                            15,
-                                                                          ),
-                                                                        ),
-                                                                    child: Row(
-                                                                      mainAxisSize:
-                                                                          MainAxisSize
-                                                                              .min,
-                                                                      children: [
-                                                                        ScaleTransition(
-                                                                          scale:
-                                                                              _firstSwipeChevronScale,
-                                                                          child: SFSymbolHelper.getChevronRight(
-                                                                            size: s(
-                                                                              15,
-                                                                            ),
-                                                                            color: HSLColor.fromAHSL(
-                                                                              0.59,
-                                                                              0,
-                                                                              0,
-                                                                              0.22,
-                                                                            ).toColor(),
-                                                                          ),
-                                                                        ),
-                                                                        Transform.translate(
-                                                                          offset: Offset(
-                                                                            -s(
-                                                                              4,
-                                                                            ),
-                                                                            0,
-                                                                          ),
-                                                                          child: ScaleTransition(
-                                                                            scale:
-                                                                                _secondSwipeChevronScale,
-                                                                            child: SFSymbolHelper.getChevronRight(
-                                                                              size: s(
-                                                                                15,
+                                                                          right:
+                                                                              s(
+                                                                                5,
                                                                               ),
-                                                                              color: const Color(
-                                                                                0xFF1A1A1A,
+                                                                        ),
+                                                                    child: SizedBox(
+                                                                      width: s(
+                                                                        45,
+                                                                      ),
+                                                                      height: s(
+                                                                        34,
+                                                                      ),
+                                                                      child: Stack(
+                                                                        clipBehavior:
+                                                                            Clip.none,
+                                                                        alignment:
+                                                                            Alignment.centerLeft,
+                                                                        children: [
+                                                                          Positioned(
+                                                                            left:
+                                                                                0,
+                                                                            child: ScaleTransition(
+                                                                              scale: _firstSwipeChevronScale,
+                                                                              child: SFSymbolHelper.getChevronRight(
+                                                                                size: s(
+                                                                                  28,
+                                                                                ),
+                                                                                color: HSLColor.fromAHSL(
+                                                                                  0.59,
+                                                                                  0,
+                                                                                  0,
+                                                                                  0.22,
+                                                                                ).toColor(),
                                                                               ),
                                                                             ),
                                                                           ),
-                                                                        ),
-                                                                      ],
+                                                                          Positioned(
+                                                                            left: s(
+                                                                              9,
+                                                                            ),
+                                                                            child: ScaleTransition(
+                                                                              scale: _secondSwipeChevronScale,
+                                                                              child: SFSymbolHelper.getChevronRight(
+                                                                                size: s(
+                                                                                  28,
+                                                                                ),
+                                                                                color: const Color(
+                                                                                  0xFF1A1A1A,
+                                                                                ),
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),

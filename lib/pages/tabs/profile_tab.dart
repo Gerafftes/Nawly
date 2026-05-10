@@ -13,7 +13,7 @@ import '../profile_details/feedback_page.dart';
 import '../profile_details/profile_detail_prewarm.dart';
 
 const double _profileIconBaseSize = 21;
-const double _profileChevronBaseSize = 18;
+const double _profileChevronBaseSize = 28;
 const Duration _profileDetailBatchWarmupDelay = Duration(milliseconds: 300);
 const Duration _profileDetailBatchUnmountDelay = Duration(milliseconds: 16);
 

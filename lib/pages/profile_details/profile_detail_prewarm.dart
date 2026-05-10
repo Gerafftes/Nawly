@@ -24,7 +24,6 @@ const Set<String> kProfileDetailWarmupIconPaths = <String>{
   'assets/icons/paypal_groß.svg',
   'assets/icons/visa_groß.svg',
   'assets/icons/plus.circle.fill.svg',
-  'assets/icons/chevron.right.svg',
 };
 
 const List<ProfileDetailPrewarmTarget> kProfileDetailPrewarmOrder =

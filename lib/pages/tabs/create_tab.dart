@@ -145,7 +145,7 @@ class _CreateTabContentState extends State<CreateTabContent> {
                             right: s(30),
                             child: SFSymbolHelper.getChevronRight(
                               color: const Color(0xFFF2F2F2),
-                              size: s(17),
+                              size: s(28),
                             ),
                           ),
                         ],

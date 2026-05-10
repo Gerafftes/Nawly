@@ -77,10 +77,6 @@ class SFSymbolHelper {
       name: 'square.and.pencil.circle.fill',
       fallbackIcon: CupertinoIcons.square_pencil,
     ),
-    'assets/icons/chevron.right.svg': _SFSymbolIconDefinition(
-      name: 'chevron.right',
-      fallbackIcon: CupertinoIcons.chevron_right,
-    ),
     'assets/icons/xmark.circle.fill.svg': _SFSymbolIconDefinition(
       name: 'xmark.circle.fill',
       fallbackIcon: CupertinoIcons.xmark_circle_fill,
@@ -216,12 +212,7 @@ class SFSymbolHelper {
   }
 
   static Widget getChevronRight({required double size, required Color color}) {
-    return AppleLiquidSymbol(
-      'chevron.right',
-      size: size,
-      color: color,
-      fallbackIcon: CupertinoIcons.chevron_right,
-    );
+    return Icon(Icons.keyboard_arrow_right, size: size, color: color);
   }
 
   /// Updates the mapping for a specific icon path
@@ -274,8 +265,6 @@ class SFSymbolHelper {
         return CupertinoIcons.headphones;
       case 'square.and.pencil.circle.fill':
         return CupertinoIcons.square_pencil;
-      case 'chevron.right':
-        return CupertinoIcons.chevron_right;
       case 'xmark.circle.fill':
         return CupertinoIcons.xmark_circle_fill;
       case 'eye.circle.fill':
