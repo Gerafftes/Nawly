@@ -22,7 +22,7 @@ class ProfileTabContent extends StatefulWidget {
   final double headerTopInset;
   final bool isDark;
   final double scrollBottomPadding;
-  final ValueChanged<Widget> onOpenDetailPage;
+  final ValueChanged<WidgetBuilder> onOpenDetailPage;
 
   const ProfileTabContent({
     super.key,
@@ -210,7 +210,9 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                               showDivider: true,
                               onTap: () {
                                 widget.onOpenDetailPage(
-                                  GeneralPage(isDarkOverride: widget.isDark),
+                                  (_) => GeneralPage(
+                                    isDarkOverride: widget.isDark,
+                                  ),
                                 );
                               },
                             ),
@@ -223,7 +225,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                               showDivider: true,
                               onTap: () {
                                 widget.onOpenDetailPage(
-                                  NotificationsPage(
+                                  (_) => NotificationsPage(
                                     isDarkOverride: widget.isDark,
                                   ),
                                 );
@@ -238,7 +240,9 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                               showDivider: true,
                               onTap: () {
                                 widget.onOpenDetailPage(
-                                  PaymentsPage(isDarkOverride: widget.isDark),
+                                  (_) => PaymentsPage(
+                                    isDarkOverride: widget.isDark,
+                                  ),
                                 );
                               },
                             ),
@@ -251,7 +255,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                               showDivider: false,
                               onTap: () {
                                 widget.onOpenDetailPage(
-                                  VerificationPage(
+                                  (_) => VerificationPage(
                                     isDarkOverride: widget.isDark,
                                   ),
                                 );
@@ -273,7 +277,8 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                               showDivider: true,
                               onTap: () {
                                 widget.onOpenDetailPage(
-                                  LegalPage(isDarkOverride: widget.isDark),
+                                  (_) =>
+                                      LegalPage(isDarkOverride: widget.isDark),
                                 );
                               },
                             ),
@@ -286,7 +291,9 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                               showDivider: true,
                               onTap: () {
                                 widget.onOpenDetailPage(
-                                  AffiliatePage(isDarkOverride: widget.isDark),
+                                  (_) => AffiliatePage(
+                                    isDarkOverride: widget.isDark,
+                                  ),
                                 );
                               },
                             ),
@@ -299,7 +306,9 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                               showDivider: false,
                               onTap: () {
                                 widget.onOpenDetailPage(
-                                  FeedbackPage(isDarkOverride: widget.isDark),
+                                  (_) => FeedbackPage(
+                                    isDarkOverride: widget.isDark,
+                                  ),
                                 );
                               },
                             ),

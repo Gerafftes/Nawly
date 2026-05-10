@@ -205,9 +205,7 @@ class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
             builder: (context, child) {
               final double width = MediaQuery.sizeOf(context).width;
               final double animationValue = animation.value.clamp(0.0, 1.0);
-              final bool shouldTranslate =
-                  _usesSwipeBackVisual ||
-                  animation.status == AnimationStatus.reverse;
+              final bool shouldTranslate = _usesSwipeBackVisual;
               final double visualValue = shouldTranslate
                   ? animationValue
                   : Curves.easeInOut.transform(animationValue);

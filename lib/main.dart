@@ -65,7 +65,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   static const int _startTabIndex = 0;
   static const int _activityTabIndex = 1;
   static const int _profileTabIndex = 2;
@@ -73,24 +74,42 @@ class _HomeScreenState extends State<HomeScreen> {
   static const int _notificationsTabIndex = 4;
   static const Duration _tabFadeInDuration = Duration(milliseconds: 250);
   static const Duration _tabFadeOutDuration = Duration(milliseconds: 250);
+  static const Duration _profileDetailSwipeSettleDuration = Duration(
+    milliseconds: 220,
+  );
   static const Duration _startTabProfileWarmupDelay = Duration(seconds: 4);
   static const Duration _startTabProfileWarmupGap = Duration(milliseconds: 700);
   static const Duration _warmupUnmountDelay = Duration(milliseconds: 16);
+  static const double _profileDetailSwipeCommitProgress = 0.36;
+  static const double _profileDetailSwipeMinFlingVelocity = 520;
 
   int selectedIndex = 0;
   int _bottomNavIndex = 0;
   int _mainTabIndex = 0;
+  WidgetBuilder? _lastProfileDetailPageBuilder;
   String _themeMode = 'auto';
   bool _showShakeOverlay = false;
   bool _showProfileInfoBox = true;
+  bool _showProfileDetailSwipeStack = false;
+  bool _openProfileDetailAfterSwipeAnimation = false;
+  double _profileDetailSwipeProgress = 0;
   ShakeDetector? _shakeDetector;
   Timer? _profileWarmupTimer;
   ProfileDetailPrewarmTarget? _activeProfileWarmupTarget;
   bool _hasQueuedProfileWarmupIconPrecache = false;
+  late final AnimationController _profileDetailSwipeController;
+  Animation<double>? _profileDetailSwipeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _profileDetailSwipeController =
+        AnimationController(
+            vsync: this,
+            duration: _profileDetailSwipeSettleDuration,
+          )
+          ..addListener(_syncProfileDetailSwipeAnimation)
+          ..addStatusListener(_handleProfileDetailSwipeAnimationStatus);
     _loadThemePreference();
     _initializeShakeDetector();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -123,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _profileWarmupTimer?.cancel();
+    _profileDetailSwipeController.dispose();
     _shakeDetector = null;
     super.dispose();
   }
@@ -142,6 +162,119 @@ class _HomeScreenState extends State<HomeScreen> {
         reverseTransitionDuration: const Duration(milliseconds: 280),
       ),
     );
+  }
+
+  void _openProfileDetailPage(WidgetBuilder pageBuilder) {
+    _lastProfileDetailPageBuilder = pageBuilder;
+    _pushWithFade(pageBuilder(context));
+  }
+
+  void _startProfileDetailSwipe(DragStartDetails details) {
+    if (_bottomNavIndex != _profileTabIndex ||
+        _lastProfileDetailPageBuilder == null) {
+      return;
+    }
+    _profileDetailSwipeController.stop();
+    _profileDetailSwipeAnimation = null;
+    setState(() {
+      _openProfileDetailAfterSwipeAnimation = false;
+      _showProfileDetailSwipeStack = true;
+      _profileDetailSwipeProgress = 0;
+    });
+  }
+
+  void _updateProfileDetailSwipe(DragUpdateDetails details, double width) {
+    if (!_showProfileDetailSwipeStack || width <= 0) {
+      return;
+    }
+
+    final double primaryDelta = details.primaryDelta ?? 0;
+    final double nextProgress =
+        (_profileDetailSwipeProgress - (primaryDelta / width)).clamp(0.0, 1.0);
+    if ((nextProgress - _profileDetailSwipeProgress).abs() <= 0.001) {
+      return;
+    }
+
+    setState(() {
+      _profileDetailSwipeProgress = nextProgress;
+    });
+  }
+
+  void _endProfileDetailSwipe(DragEndDetails details) {
+    if (!_showProfileDetailSwipeStack) {
+      return;
+    }
+
+    final double velocity = details.primaryVelocity ?? 0;
+    final bool isCancelFling = velocity > _profileDetailSwipeMinFlingVelocity;
+    final bool shouldComplete =
+        !isCancelFling &&
+        (velocity < -_profileDetailSwipeMinFlingVelocity ||
+            _profileDetailSwipeProgress >= _profileDetailSwipeCommitProgress);
+
+    _animateProfileDetailSwipeTo(
+      shouldComplete ? 1 : 0,
+      openDetailPage: shouldComplete,
+    );
+  }
+
+  void _cancelProfileDetailSwipe() {
+    if (!_showProfileDetailSwipeStack) {
+      return;
+    }
+    _animateProfileDetailSwipeTo(0, openDetailPage: false);
+  }
+
+  void _animateProfileDetailSwipeTo(
+    double target, {
+    required bool openDetailPage,
+  }) {
+    _profileDetailSwipeController.stop();
+    _profileDetailSwipeController.duration = _profileDetailSwipeSettleDuration;
+    _profileDetailSwipeAnimation =
+        Tween<double>(begin: _profileDetailSwipeProgress, end: target).animate(
+          CurvedAnimation(
+            parent: _profileDetailSwipeController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
+    _openProfileDetailAfterSwipeAnimation = openDetailPage;
+    _profileDetailSwipeController.forward(from: 0);
+  }
+
+  void _syncProfileDetailSwipeAnimation() {
+    final Animation<double>? animation = _profileDetailSwipeAnimation;
+    if (animation == null || !mounted) {
+      return;
+    }
+    setState(() {
+      _profileDetailSwipeProgress = animation.value;
+    });
+  }
+
+  void _handleProfileDetailSwipeAnimationStatus(AnimationStatus status) {
+    if (status != AnimationStatus.completed || !mounted) {
+      return;
+    }
+
+    final bool shouldOpenDetailPage = _openProfileDetailAfterSwipeAnimation;
+    final WidgetBuilder? pageBuilder = _lastProfileDetailPageBuilder;
+    setState(() {
+      _profileDetailSwipeAnimation = null;
+      _showProfileDetailSwipeStack = false;
+      _openProfileDetailAfterSwipeAnimation = false;
+      _profileDetailSwipeProgress = 0;
+    });
+
+    if (shouldOpenDetailPage && pageBuilder != null) {
+      Navigator.of(context).push(
+        buildProfileDetailFadeRoute<void>(
+          page: pageBuilder(context),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: const Duration(milliseconds: 280),
+        ),
+      );
+    }
   }
 
   void _syncDelayedProfileWarmup({
@@ -412,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> {
           final double profileBottomExtra = _showProfileInfoBox
               ? profileBottomGap + profileBottomBoxHeight
               : 0;
-          return ValueListenableBuilder<double>(
+          final Widget profileTab = ValueListenableBuilder<double>(
             valueListenable: profileDetailBackgroundParallaxProgress,
             builder: (context, progress, child) {
               final double clampedProgress = progress.clamp(0.0, 1.0);
@@ -442,7 +575,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         isDark: isDark,
                         scrollBottomPadding:
                             bottomNavHeight + bottomInset + profileBottomExtra,
-                        onOpenDetailPage: _pushWithFade,
+                        onOpenDetailPage: _openProfileDetailPage,
                       ),
                     ),
                   ),
@@ -463,8 +596,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           });
                         },
                         onVerifyNow: () {
-                          _pushWithFade(
-                            VerificationPage(isDarkOverride: isDark),
+                          _openProfileDetailPage(
+                            (_) => VerificationPage(isDarkOverride: isDark),
                           );
                         },
                       ),
@@ -472,6 +605,48 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
               ],
             ),
+          );
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final double width = constraints.maxWidth;
+              final double swipeProgress = _profileDetailSwipeProgress.clamp(
+                0.0,
+                1.0,
+              );
+              final WidgetBuilder? detailPageBuilder =
+                  _lastProfileDetailPageBuilder;
+              final bool showDetailSwipeStack =
+                  _showProfileDetailSwipeStack && detailPageBuilder != null;
+              final Widget child = !showDetailSwipeStack
+                  ? profileTab
+                  : Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Transform.translate(
+                          offset: Offset(width * (1 - swipeProgress), 0),
+                          child: KeyedSubtree(
+                            key: ValueKey<WidgetBuilder>(detailPageBuilder),
+                            child: detailPageBuilder(context),
+                          ),
+                        ),
+                        Transform.translate(
+                          offset: Offset(-width * swipeProgress, 0),
+                          child: profileTab,
+                        ),
+                      ],
+                    );
+
+              return GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onHorizontalDragStart: _startProfileDetailSwipe,
+                onHorizontalDragUpdate: (details) {
+                  _updateProfileDetailSwipe(details, width);
+                },
+                onHorizontalDragEnd: _endProfileDetailSwipe,
+                onHorizontalDragCancel: _cancelProfileDetailSwipe,
+                child: child,
+              );
+            },
           );
         case _createTabIndex:
           return Padding(
@@ -568,6 +743,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   onPressed: () {
                     setState(() {
+                      _profileDetailSwipeController.stop();
+                      _profileDetailSwipeAnimation = null;
+                      _showProfileDetailSwipeStack = false;
+                      _openProfileDetailAfterSwipeAnimation = false;
+                      _profileDetailSwipeProgress = 0;
                       if (_bottomNavIndex == _notificationsTabIndex) {
                         _bottomNavIndex = _mainTabIndex;
                       } else {
@@ -733,6 +913,11 @@ class _HomeScreenState extends State<HomeScreen> {
           onChanged: (index) {
             HapticFeedback.selectionClick();
             setState(() {
+              _profileDetailSwipeController.stop();
+              _profileDetailSwipeAnimation = null;
+              _showProfileDetailSwipeStack = false;
+              _openProfileDetailAfterSwipeAnimation = false;
+              _profileDetailSwipeProgress = 0;
               if (index == _startTabIndex &&
                   _bottomNavIndex == _startTabIndex) {
                 selectedIndex = 0;
