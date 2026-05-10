@@ -960,6 +960,11 @@ class _PaymentsPageState extends State<PaymentsPage>
               surfaceTintColor: Colors.transparent,
               centerTitle: true,
               titleSpacing: null,
+              automaticallyImplyLeading: false,
+              leading: ProfileDetailBackButton(
+                color: textColor,
+                iconSize: s(20),
+              ),
               iconTheme: IconThemeData(color: textColor, size: s(20)),
               title: Text(
                 'Zahlungen & Auszahlungen',
@@ -1879,81 +1884,118 @@ class _PaymentsPageState extends State<PaymentsPage>
                                         if (isManualSelected &&
                                             _standardPayoutIndex != null) ...[
                                           SizedBox(height: s(26)),
-                                          SizedBox(
-                                            height: s(60),
-                                            width: double.infinity,
-                                            child: LayoutBuilder(
-                                              builder: (context, constraints) {
-                                                final double handleWidth = s(
-                                                  60,
-                                                );
-                                                final double handleRadius = -s(
-                                                  15,
-                                                );
-                                                final double
-                                                handleCornerRadius = s(15);
-                                                final double
-                                                rightCornerTransition = s(24);
-                                                final double maxOffset =
-                                                    (constraints.maxWidth -
-                                                            handleWidth)
-                                                        .clamp(
-                                                          0.0,
-                                                          double.infinity,
-                                                        );
-                                                final double snapThreshold =
-                                                    (maxOffset - handleWidth)
-                                                        .clamp(0.0, maxOffset);
-                                                final double clampedOffset =
-                                                    _payoutSwipeOffset.clamp(
-                                                      0.0,
-                                                      maxOffset,
-                                                    );
-                                                final double
-                                                rightCornerProgress =
-                                                    (clampedOffset /
-                                                            rightCornerTransition)
-                                                        .clamp(0.0, 1.0);
-                                                final double rightCornerRadius =
-                                                    handleCornerRadius *
-                                                    rightCornerProgress;
-                                                final double maxTrailWidth =
-                                                    (maxOffset - handleRadius)
-                                                        .clamp(
-                                                          0.0,
-                                                          constraints.maxWidth,
-                                                        );
-                                                final double trailWidth =
-                                                    (clampedOffset -
-                                                            handleRadius)
-                                                        .clamp(
-                                                          0.0,
-                                                          maxTrailWidth,
-                                                        );
-                                                return Semantics(
-                                                  button: true,
-                                                  label:
-                                                      'Wischen zum Auszahlen',
-                                                  child: GestureDetector(
-                                                    behavior:
-                                                        HitTestBehavior.opaque,
-                                                    onHorizontalDragStart: (_) {
-                                                      _swipeSnapController
-                                                          .stop();
-                                                      setState(() {
-                                                        _swipeSnapAnimation =
-                                                            null;
-                                                        _pendingHapticOnSnap =
-                                                            false;
-                                                        _snapHapticTriggerOffset =
-                                                            null;
-                                                        _didTriggerSnapHaptic =
-                                                            false;
-                                                        _showSwipeEndCap = true;
-                                                      });
-                                                    },
-                                                    onHorizontalDragUpdate:
-                                                        (details) {
+                                          ProfileDetailSwipeBackGestureBlocker(
+                                            child: SizedBox(
+                                              height: s(60),
+                                              width: double.infinity,
+                                              child: LayoutBuilder(
+                                                builder: (context, constraints) {
+                                                  final double handleWidth = s(
+                                                    60,
+                                                  );
+                                                  final double handleRadius =
+                                                      -s(15);
+                                                  final double
+                                                  handleCornerRadius = s(15);
+                                                  final double
+                                                  rightCornerTransition = s(24);
+                                                  final double maxOffset =
+                                                      (constraints.maxWidth -
+                                                              handleWidth)
+                                                          .clamp(
+                                                            0.0,
+                                                            double.infinity,
+                                                          );
+                                                  final double snapThreshold =
+                                                      (maxOffset - handleWidth)
+                                                          .clamp(
+                                                            0.0,
+                                                            maxOffset,
+                                                          );
+                                                  final double clampedOffset =
+                                                      _payoutSwipeOffset.clamp(
+                                                        0.0,
+                                                        maxOffset,
+                                                      );
+                                                  final double
+                                                  rightCornerProgress =
+                                                      (clampedOffset /
+                                                              rightCornerTransition)
+                                                          .clamp(0.0, 1.0);
+                                                  final double
+                                                  rightCornerRadius =
+                                                      handleCornerRadius *
+                                                      rightCornerProgress;
+                                                  final double maxTrailWidth =
+                                                      (maxOffset - handleRadius)
+                                                          .clamp(
+                                                            0.0,
+                                                            constraints
+                                                                .maxWidth,
+                                                          );
+                                                  final double trailWidth =
+                                                      (clampedOffset -
+                                                              handleRadius)
+                                                          .clamp(
+                                                            0.0,
+                                                            maxTrailWidth,
+                                                          );
+                                                  return Semantics(
+                                                    button: true,
+                                                    label:
+                                                        'Wischen zum Auszahlen',
+                                                    child: Listener(
+                                                      onPointerDown: (_) {
+                                                        if (!_showSwipeEndCap) {
+                                                          setState(() {
+                                                            _showSwipeEndCap =
+                                                                true;
+                                                          });
+                                                        }
+                                                      },
+                                                      onPointerUp: (_) {
+                                                        if (_payoutSwipeOffset <=
+                                                                0 &&
+                                                            _showSwipeEndCap &&
+                                                            !_isPayoutProcessing) {
+                                                          setState(() {
+                                                            _showSwipeEndCap =
+                                                                false;
+                                                          });
+                                                        }
+                                                      },
+                                                      onPointerCancel: (_) {
+                                                        if (_payoutSwipeOffset <=
+                                                                0 &&
+                                                            _showSwipeEndCap &&
+                                                            !_isPayoutProcessing) {
+                                                          setState(() {
+                                                            _showSwipeEndCap =
+                                                                false;
+                                                          });
+                                                        }
+                                                      },
+                                                      child: GestureDetector(
+                                                        behavior:
+                                                            HitTestBehavior
+                                                                .opaque,
+                                                        onHorizontalDragStart: (_) {
+                                                          _swipeSnapController
+                                                              .stop();
+                                                          setState(() {
+                                                            _swipeSnapAnimation =
+                                                                null;
+                                                            _pendingHapticOnSnap =
+                                                                false;
+                                                            _snapHapticTriggerOffset =
+                                                                null;
+                                                            _didTriggerSnapHaptic =
+                                                                false;
+                                                            _showSwipeEndCap =
+                                                                true;
+                                                          });
+                                                        },
+                                                        onHorizontalDragUpdate: (details) {
                                                           final double
                                                           nextOffset =
                                                               (_payoutSwipeOffset +
@@ -1971,178 +2013,155 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                 nextOffset > 0;
                                                           });
                                                         },
-                                                    onHorizontalDragEnd: (details) {
-                                                      final double velocity =
-                                                          details
-                                                              .primaryVelocity ??
-                                                          0;
-                                                      final double
-                                                      projectedPosition =
-                                                          _payoutSwipeOffset +
-                                                          (velocity * 0.2);
-                                                      bool shouldSnapToEnd =
-                                                          projectedPosition >=
-                                                          snapThreshold;
-                                                      if (_payoutSwipeOffset >=
-                                                              snapThreshold &&
-                                                          velocity > -500) {
-                                                        shouldSnapToEnd = true;
-                                                      }
+                                                        onHorizontalDragEnd: (details) {
+                                                          final double
+                                                          velocity =
+                                                              details
+                                                                  .primaryVelocity ??
+                                                              0;
+                                                          final double
+                                                          projectedPosition =
+                                                              _payoutSwipeOffset +
+                                                              (velocity * 0.2);
+                                                          bool shouldSnapToEnd =
+                                                              projectedPosition >=
+                                                              snapThreshold;
+                                                          if (_payoutSwipeOffset >=
+                                                                  snapThreshold &&
+                                                              velocity > -500) {
+                                                            shouldSnapToEnd =
+                                                                true;
+                                                          }
 
-                                                      if (shouldSnapToEnd) {
-                                                        _animateSwipeTo(
-                                                          maxOffset,
-                                                          triggerHaptic: true,
-                                                          openPayoutPageAfterSnap:
-                                                              true,
-                                                          curve: Curves
-                                                              .easeOutCubic,
-                                                        );
-                                                      } else {
-                                                        _animateSwipeTo(
-                                                          0,
-                                                          curve: Curves
-                                                              .easeOutCubic,
-                                                        );
-                                                      }
-                                                    },
-                                                    onHorizontalDragCancel: () {
-                                                      if (_payoutSwipeOffset >=
-                                                          snapThreshold) {
-                                                        _animateSwipeTo(
-                                                          maxOffset,
-                                                          triggerHaptic: true,
-                                                          openPayoutPageAfterSnap:
-                                                              true,
-                                                          curve: Curves
-                                                              .easeOutCubic,
-                                                        );
-                                                      } else {
-                                                        _animateSwipeTo(
-                                                          0,
-                                                          curve: Curves
-                                                              .easeOutCubic,
-                                                        );
-                                                      }
-                                                    },
-                                                    child: ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            s(15),
-                                                          ),
-                                                      child: Stack(
-                                                        fit: StackFit.expand,
-                                                        alignment:
-                                                            Alignment.center,
-                                                        children: [
-                                                          ColoredBox(
-                                                            color:
-                                                                HSLColor.fromAHSL(
-                                                                  0.3,
-                                                                  211,
-                                                                  1.0,
-                                                                  0.50,
-                                                                ).toColor(),
-                                                          ),
-                                                          if (trailWidth > 0)
-                                                            Positioned(
-                                                              left: 0,
-                                                              top: 0,
-                                                              bottom: 0,
-                                                              child: SizedBox(
-                                                                width:
-                                                                    trailWidth,
-                                                                height: double
-                                                                    .infinity,
-                                                                child: const ColoredBox(
-                                                                  color: Color(
-                                                                    0xFF007AFF,
+                                                          if (shouldSnapToEnd) {
+                                                            _animateSwipeTo(
+                                                              maxOffset,
+                                                              triggerHaptic:
+                                                                  true,
+                                                              openPayoutPageAfterSnap:
+                                                                  true,
+                                                              curve: Curves
+                                                                  .easeOutCubic,
+                                                            );
+                                                          } else {
+                                                            _animateSwipeTo(
+                                                              0,
+                                                              curve: Curves
+                                                                  .easeOutCubic,
+                                                            );
+                                                          }
+                                                        },
+                                                        onHorizontalDragCancel: () {
+                                                          if (_payoutSwipeOffset >=
+                                                              snapThreshold) {
+                                                            _animateSwipeTo(
+                                                              maxOffset,
+                                                              triggerHaptic:
+                                                                  true,
+                                                              openPayoutPageAfterSnap:
+                                                                  true,
+                                                              curve: Curves
+                                                                  .easeOutCubic,
+                                                            );
+                                                          } else {
+                                                            _animateSwipeTo(
+                                                              0,
+                                                              curve: Curves
+                                                                  .easeOutCubic,
+                                                            );
+                                                          }
+                                                        },
+                                                        child: ClipRRect(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                s(15),
+                                                              ),
+                                                          child: Stack(
+                                                            fit:
+                                                                StackFit.expand,
+                                                            alignment: Alignment
+                                                                .center,
+                                                            children: [
+                                                              ColoredBox(
+                                                                color:
+                                                                    HSLColor.fromAHSL(
+                                                                      0.3,
+                                                                      211,
+                                                                      1.0,
+                                                                      0.50,
+                                                                    ).toColor(),
+                                                              ),
+                                                              if (trailWidth >
+                                                                  0)
+                                                                Positioned(
+                                                                  left: 0,
+                                                                  top: 0,
+                                                                  bottom: 0,
+                                                                  child: SizedBox(
+                                                                    width:
+                                                                        trailWidth,
+                                                                    height: double
+                                                                        .infinity,
+                                                                    child: const ColoredBox(
+                                                                      color: Color(
+                                                                        0xFF007AFF,
+                                                                      ),
+                                                                    ),
                                                                   ),
                                                                 ),
-                                                              ),
-                                                            ),
-                                                          Positioned(
-                                                            right: 0,
-                                                            top: 0,
-                                                            bottom: 0,
-                                                            child: IgnorePointer(
-                                                              ignoring:
-                                                                  !_showSwipeEndCap,
-                                                              child: AnimatedOpacity(
-                                                                opacity:
-                                                                    _showSwipeEndCap
-                                                                    ? 1
-                                                                    : 0,
-                                                                duration: Duration(
-                                                                  milliseconds:
-                                                                      _showSwipeEndCap
-                                                                      ? 160
-                                                                      : 80,
-                                                                ),
-                                                                curve: Curves
-                                                                    .easeInOut,
-                                                                child: SizedBox(
-                                                                  width:
-                                                                      handleWidth,
-                                                                  height: double
-                                                                      .infinity,
-                                                                  child: DecoratedBox(
-                                                                    decoration: BoxDecoration(
-                                                                      color: HSLColor.fromAHSL(
-                                                                        0.3,
-                                                                        211,
-                                                                        1.0,
-                                                                        0.50,
-                                                                      ).toColor(),
-                                                                      border: Border.all(
-                                                                        color: const Color(
-                                                                          0xFFCCCCCC,
-                                                                        ),
-                                                                        width:
-                                                                            s(
+                                                              Positioned(
+                                                                right: 0,
+                                                                top: 0,
+                                                                bottom: 0,
+                                                                child: IgnorePointer(
+                                                                  ignoring:
+                                                                      !_showSwipeEndCap,
+                                                                  child: AnimatedOpacity(
+                                                                    opacity:
+                                                                        _showSwipeEndCap
+                                                                        ? 1
+                                                                        : 0,
+                                                                    duration: Duration(
+                                                                      milliseconds:
+                                                                          _showSwipeEndCap
+                                                                          ? 160
+                                                                          : 80,
+                                                                    ),
+                                                                    curve: Curves
+                                                                        .easeInOut,
+                                                                    child: SizedBox(
+                                                                      width:
+                                                                          handleWidth,
+                                                                      height: double
+                                                                          .infinity,
+                                                                      child: DecoratedBox(
+                                                                        decoration: BoxDecoration(
+                                                                          color: HSLColor.fromAHSL(
+                                                                            0.3,
+                                                                            211,
+                                                                            1.0,
+                                                                            0.50,
+                                                                          ).toColor(),
+                                                                          border: Border.all(
+                                                                            color: const Color(
+                                                                              0xFFCCCCCC,
+                                                                            ),
+                                                                            width: s(
                                                                               1,
                                                                             ),
-                                                                      ),
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
+                                                                          ),
+                                                                          borderRadius: BorderRadius.circular(
                                                                             s(
                                                                               15,
                                                                             ),
                                                                           ),
+                                                                        ),
+                                                                      ),
                                                                     ),
                                                                   ),
                                                                 ),
                                                               ),
-                                                            ),
-                                                          ),
-                                                          Positioned.fill(
-                                                            child: Center(
-                                                              child: Text(
-                                                                'Wischen zum Auszahlen',
-                                                                textAlign:
-                                                                    TextAlign
-                                                                        .center,
-                                                                style: TextStyle(
-                                                                  color: const Color(
-                                                                    0xFF4DAAFC,
-                                                                  ),
-                                                                  fontSize: s(
-                                                                    16,
-                                                                  ),
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          if (trailWidth > 0)
-                                                            Positioned.fill(
-                                                              child: ClipRect(
-                                                                clipper:
-                                                                    _SwipeTrailClipper(
-                                                                      trailWidth,
-                                                                    ),
+                                                              Positioned.fill(
                                                                 child: Center(
                                                                   child: Text(
                                                                     'Wischen zum Auszahlen',
@@ -2151,7 +2170,7 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                             .center,
                                                                     style: TextStyle(
                                                                       color: const Color(
-                                                                        0xFFF2F2F2,
+                                                                        0xFF4DAAFC,
                                                                       ),
                                                                       fontSize:
                                                                           s(16),
@@ -2162,153 +2181,171 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                   ),
                                                                 ),
                                                               ),
-                                                            ),
-                                                          Positioned(
-                                                            left: clampedOffset,
-                                                            top: 0,
-                                                            bottom: 0,
-                                                            child: SizedBox(
-                                                              width:
-                                                                  handleWidth,
-                                                              height: double
-                                                                  .infinity,
-                                                              child: Container(
-                                                                decoration: BoxDecoration(
-                                                                  color: const Color(
-                                                                    0xFFD9D9D9,
-                                                                  ),
-                                                                  boxShadow:
-                                                                      _payoutSwipeOffset >
-                                                                          0
-                                                                      ? [
-                                                                          BoxShadow(
-                                                                            color: HSLColor.fromAHSL(
-                                                                              0.25,
-                                                                              0,
-                                                                              0,
-                                                                              0,
-                                                                            ).toColor(),
-                                                                            offset: Offset(
-                                                                              -s(
-                                                                                3,
-                                                                              ),
-                                                                              0,
-                                                                            ),
-                                                                            blurRadius: s(
-                                                                              4,
-                                                                            ),
-                                                                            spreadRadius:
-                                                                                0,
+                                                              if (trailWidth >
+                                                                  0)
+                                                                Positioned.fill(
+                                                                  child: ClipRect(
+                                                                    clipper:
+                                                                        _SwipeTrailClipper(
+                                                                          trailWidth,
+                                                                        ),
+                                                                    child: Center(
+                                                                      child: Text(
+                                                                        'Wischen zum Auszahlen',
+                                                                        textAlign:
+                                                                            TextAlign.center,
+                                                                        style: TextStyle(
+                                                                          color: const Color(
+                                                                            0xFFF2F2F2,
                                                                           ),
-                                                                        ]
-                                                                      : [],
-                                                                  borderRadius: BorderRadius.only(
-                                                                    topLeft:
-                                                                        Radius.circular(
-                                                                          handleCornerRadius,
+                                                                          fontSize: s(
+                                                                            16,
+                                                                          ),
+                                                                          fontWeight:
+                                                                              FontWeight.bold,
                                                                         ),
-                                                                    bottomLeft:
-                                                                        Radius.circular(
-                                                                          handleCornerRadius,
-                                                                        ),
-                                                                    topRight:
-                                                                        Radius.circular(
-                                                                          rightCornerRadius,
-                                                                        ),
-                                                                    bottomRight:
-                                                                        Radius.circular(
-                                                                          rightCornerRadius,
-                                                                        ),
+                                                                      ),
+                                                                    ),
                                                                   ),
                                                                 ),
-                                                                alignment: Alignment
-                                                                    .centerRight,
-                                                                padding:
-                                                                    EdgeInsets.only(
-                                                                      right: s(
-                                                                        15,
+                                                              Positioned(
+                                                                left:
+                                                                    clampedOffset,
+                                                                top: 0,
+                                                                bottom: 0,
+                                                                child: SizedBox(
+                                                                  width:
+                                                                      handleWidth,
+                                                                  height: double
+                                                                      .infinity,
+                                                                  child: Container(
+                                                                    decoration: BoxDecoration(
+                                                                      color: const Color(
+                                                                        0xFFD9D9D9,
+                                                                      ),
+                                                                      boxShadow:
+                                                                          _payoutSwipeOffset >
+                                                                              0
+                                                                          ? [
+                                                                              BoxShadow(
+                                                                                color: HSLColor.fromAHSL(
+                                                                                  0.25,
+                                                                                  0,
+                                                                                  0,
+                                                                                  0,
+                                                                                ).toColor(),
+                                                                                offset: Offset(
+                                                                                  -s(
+                                                                                    3,
+                                                                                  ),
+                                                                                  0,
+                                                                                ),
+                                                                                blurRadius: s(
+                                                                                  4,
+                                                                                ),
+                                                                                spreadRadius: 0,
+                                                                              ),
+                                                                            ]
+                                                                          : [],
+                                                                      borderRadius: BorderRadius.only(
+                                                                        topLeft:
+                                                                            Radius.circular(
+                                                                              handleCornerRadius,
+                                                                            ),
+                                                                        bottomLeft:
+                                                                            Radius.circular(
+                                                                              handleCornerRadius,
+                                                                            ),
+                                                                        topRight:
+                                                                            Radius.circular(
+                                                                              rightCornerRadius,
+                                                                            ),
+                                                                        bottomRight:
+                                                                            Radius.circular(
+                                                                              rightCornerRadius,
+                                                                            ),
                                                                       ),
                                                                     ),
-                                                                child: Row(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  children: [
-                                                                    ScaleTransition(
-                                                                      scale:
-                                                                          _firstSwipeChevronScale,
-                                                                      child: SFSymbolHelper.getIcon(
-                                                                        iconPath:
-                                                                            'assets/icons/chevron.right.svg',
-                                                                        width: s(
-                                                                          15,
+                                                                    alignment:
+                                                                        Alignment
+                                                                            .centerRight,
+                                                                    padding:
+                                                                        EdgeInsets.only(
+                                                                          right: s(
+                                                                            15,
+                                                                          ),
                                                                         ),
-                                                                        height:
-                                                                            s(
+                                                                    child: Row(
+                                                                      mainAxisSize:
+                                                                          MainAxisSize
+                                                                              .min,
+                                                                      children: [
+                                                                        ScaleTransition(
+                                                                          scale:
+                                                                              _firstSwipeChevronScale,
+                                                                          child: SFSymbolHelper.getChevronRight(
+                                                                            size: s(
                                                                               15,
                                                                             ),
-                                                                        color: HSLColor.fromAHSL(
-                                                                          0.59,
-                                                                          0,
-                                                                          0,
-                                                                          0.22,
-                                                                        ).toColor(),
-                                                                      ),
-                                                                    ),
-                                                                    Transform.translate(
-                                                                      offset:
-                                                                          Offset(
+                                                                            color: HSLColor.fromAHSL(
+                                                                              0.59,
+                                                                              0,
+                                                                              0,
+                                                                              0.22,
+                                                                            ).toColor(),
+                                                                          ),
+                                                                        ),
+                                                                        Transform.translate(
+                                                                          offset: Offset(
                                                                             -s(
                                                                               4,
                                                                             ),
                                                                             0,
                                                                           ),
-                                                                      child: ScaleTransition(
-                                                                        scale:
-                                                                            _secondSwipeChevronScale,
-                                                                        child: SFSymbolHelper.getIcon(
-                                                                          iconPath:
-                                                                              'assets/icons/chevron.right.svg',
-                                                                          width: s(
-                                                                            15,
+                                                                          child: ScaleTransition(
+                                                                            scale:
+                                                                                _secondSwipeChevronScale,
+                                                                            child: SFSymbolHelper.getChevronRight(
+                                                                              size: s(
+                                                                                15,
+                                                                              ),
+                                                                              color: const Color(
+                                                                                0xFF1A1A1A,
+                                                                              ),
+                                                                            ),
                                                                           ),
-                                                                          height: s(
-                                                                            15,
-                                                                          ),
-                                                                          color: const Color(
-                                                                            0xFF1A1A1A,
-                                                                          ),
+                                                                        ),
+                                                                      ],
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              if (_isPayoutProcessing)
+                                                                Positioned.fill(
+                                                                  child: Center(
+                                                                    child: SizedBox.square(
+                                                                      dimension:
+                                                                          s(22),
+                                                                      child: CircularProgressIndicator(
+                                                                        strokeWidth:
+                                                                            s(
+                                                                              2.5,
+                                                                            ),
+                                                                        color: const Color(
+                                                                          0xFFF2F2F2,
                                                                         ),
                                                                       ),
                                                                     ),
-                                                                  ],
+                                                                  ),
                                                                 ),
-                                                              ),
-                                                            ),
+                                                            ],
                                                           ),
-                                                          if (_isPayoutProcessing)
-                                                            Positioned.fill(
-                                                              child: Center(
-                                                                child: SizedBox.square(
-                                                                  dimension: s(
-                                                                    22,
-                                                                  ),
-                                                                  child: CircularProgressIndicator(
-                                                                    strokeWidth:
-                                                                        s(2.5),
-                                                                    color: const Color(
-                                                                      0xFFF2F2F2,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                            ),
-                                                        ],
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                );
-                                              },
+                                                  );
+                                                },
+                                              ),
                                             ),
                                           ),
                                           SizedBox(height: s(0)),
@@ -2623,10 +2660,8 @@ class _PaymentsWarmupPhaseTwoPage extends StatelessWidget {
                             ),
                           ),
                           SizedBox(width: s(8)),
-                          SFSymbolHelper.getIcon(
-                            iconPath: 'assets/icons/chevron.right.svg',
-                            width: s(15),
-                            height: s(15),
+                          SFSymbolHelper.getChevronRight(
+                            size: s(15),
                             color: const Color(0xFFF2F2F2),
                           ),
                         ],

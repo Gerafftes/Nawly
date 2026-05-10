@@ -215,6 +215,15 @@ class SFSymbolHelper {
     );
   }
 
+  static Widget getChevronRight({required double size, required Color color}) {
+    return AppleLiquidSymbol(
+      'chevron.right',
+      size: size,
+      color: color,
+      fallbackIcon: CupertinoIcons.chevron_right,
+    );
+  }
+
   /// Updates the mapping for a specific icon path
   static void updateIconMapping(String iconPath, String sfSymbolName) {
     _iconDefinitions[iconPath] = _SFSymbolIconDefinition(

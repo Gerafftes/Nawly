@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
 const Duration kProfileDetailPushFadeDuration = Duration(milliseconds: 250);
@@ -7,15 +8,42 @@ const Duration kProfileDetailPushAnimationTolerance = Duration(
 );
 const double kProfileDetailBackgroundParallaxFraction = 0.35;
 const double _profileDetailBackGestureEdgeWidth = 34;
-const double _profileDetailBackGestureMinFlingVelocity = 420;
+const double _profileDetailBackGestureMinFlingVelocityScreensPerSecond = 1;
+const Duration _profileDetailSwipeBackPopDuration = Duration(milliseconds: 130);
 
 final ValueNotifier<double> profileDetailBackgroundParallaxProgress =
     ValueNotifier<double>(0);
 
 final Map<Object, double> _profileDetailRouteParallaxValues =
     <Object, double>{};
+final Map<Object, bool Function(Offset globalPosition)>
+_profileDetailSwipeBackBlockers = <Object, bool Function(Offset)>{};
 double? _pendingProfileDetailParallaxProgress;
 bool _hasScheduledProfileDetailParallaxPublish = false;
+
+class ProfileDetailBackButton extends StatelessWidget {
+  const ProfileDetailBackButton({super.key, this.color, this.iconSize});
+
+  final Color? color;
+  final double? iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: MaterialLocalizations.of(context).backButtonTooltip,
+      child: ExcludeSemantics(
+        child: IconButton(
+          tooltip: null,
+          icon: const BackButtonIcon(),
+          color: color,
+          iconSize: iconSize,
+          onPressed: () => Navigator.maybePop(context),
+        ),
+      ),
+    );
+  }
+}
 
 Route<T> buildProfileDetailFadeRoute<T>({
   required Widget page,
@@ -80,6 +108,66 @@ void _setProfileDetailParallaxProgress(double progress) {
   }
 }
 
+bool _isProfileDetailSwipeBackBlocked(Offset globalPosition) {
+  for (final bool Function(Offset globalPosition) blocker
+      in _profileDetailSwipeBackBlockers.values) {
+    if (blocker(globalPosition)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+class ProfileDetailSwipeBackGestureBlocker extends StatefulWidget {
+  const ProfileDetailSwipeBackGestureBlocker({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<ProfileDetailSwipeBackGestureBlocker> createState() =>
+      _ProfileDetailSwipeBackGestureBlockerState();
+}
+
+class _ProfileDetailSwipeBackGestureBlockerState
+    extends State<ProfileDetailSwipeBackGestureBlocker> {
+  final Object _owner = Object();
+  final GlobalKey _key = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _profileDetailSwipeBackBlockers[_owner] = _containsGlobalPosition;
+  }
+
+  bool _containsGlobalPosition(Offset globalPosition) {
+    final BuildContext? context = _key.currentContext;
+    if (context == null) {
+      return false;
+    }
+
+    final RenderObject? renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.attached ||
+        !renderObject.hasSize) {
+      return false;
+    }
+
+    final Offset topLeft = renderObject.localToGlobal(Offset.zero);
+    return (topLeft & renderObject.size).contains(globalPosition);
+  }
+
+  @override
+  void dispose() {
+    _profileDetailSwipeBackBlockers.remove(_owner);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(key: _key, child: widget.child);
+  }
+}
+
 class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
   _ProfileDetailSwipeBackRoute({
     required this.page,
@@ -94,8 +182,10 @@ class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
   final String performanceLabel;
   final Duration _transitionDuration;
   final Duration _reverseTransitionDuration;
+  final Object _parallaxOwner = Object();
   bool _isSwipeGestureActive = false;
   bool _usesSwipeBackVisual = false;
+  bool _isSyncingSwipeBackProgress = false;
 
   @override
   bool get opaque => true;
@@ -128,6 +218,8 @@ class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
     }
     _isSwipeGestureActive = true;
     _usesSwipeBackVisual = true;
+    _startSwipeBackProgressSync();
+    controller!.reverseDuration = _profileDetailSwipeBackPopDuration;
     controller!.stop();
   }
 
@@ -139,16 +231,20 @@ class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
     controller!.value = nextValue.clamp(0.0, 1.0);
   }
 
-  void endSwipeBack(double primaryVelocity) {
+  void endSwipeBack(double primaryVelocity, double width) {
     final AnimationController? routeController = controller;
     if (!_isSwipeGestureActive || routeController == null) {
       return;
     }
 
     _isSwipeGestureActive = false;
-    final bool shouldPop =
-        primaryVelocity > _profileDetailBackGestureMinFlingVelocity ||
-        routeController.value < 0.5;
+    final double fractionalVelocity = width <= 0 ? 0 : primaryVelocity / width;
+    final bool isFastEnough =
+        fractionalVelocity.abs() >=
+        _profileDetailBackGestureMinFlingVelocityScreensPerSecond;
+    final bool shouldPop = isFastEnough
+        ? fractionalVelocity > 0
+        : routeController.value < 0.5;
 
     if (shouldPop) {
       navigator?.pop();
@@ -163,16 +259,43 @@ class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
         )
         .whenComplete(() {
           if (routeController.value == 1) {
+            routeController.reverseDuration = _reverseTransitionDuration;
             _usesSwipeBackVisual = false;
+            _stopSwipeBackProgressSync();
           }
         });
+  }
+
+  void _startSwipeBackProgressSync() {
+    if (_isSyncingSwipeBackProgress || controller == null) {
+      return;
+    }
+    _isSyncingSwipeBackProgress = true;
+    controller!.addListener(_syncSwipeBackProgress);
+    _syncSwipeBackProgress();
+  }
+
+  void _stopSwipeBackProgressSync() {
+    if (!_isSyncingSwipeBackProgress || controller == null) {
+      return;
+    }
+    controller!.removeListener(_syncSwipeBackProgress);
+    _isSyncingSwipeBackProgress = false;
+    _removeProfileDetailRouteParallaxValue(_parallaxOwner);
+  }
+
+  void _syncSwipeBackProgress() {
+    if (controller == null) {
+      return;
+    }
+    _setProfileDetailRouteParallaxValue(_parallaxOwner, controller!.value);
   }
 
   Duration _remainingGestureAnimationDuration(double currentValue) {
     final int durationMs =
         (transitionDuration.inMilliseconds * (1 - currentValue).clamp(0.0, 1.0))
             .round();
-    return Duration(milliseconds: durationMs.clamp(120, 260));
+    return Duration(milliseconds: durationMs.clamp(60, 140));
   }
 
   @override
@@ -191,94 +314,45 @@ class _ProfileDetailSwipeBackRoute<T> extends PageRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    return _ProfileDetailRouteParallaxSync(
+    return _ProfileDetailFadeRouteProbe(
+      performanceLabel: performanceLabel,
       animation: animation,
-      child: _ProfileDetailFadeRouteProbe(
-        performanceLabel: performanceLabel,
-        animation: animation,
-        expectedDuration: transitionDuration,
-        child: _ProfileDetailSwipeBackGesture(
-          route: this,
-          child: AnimatedBuilder(
-            animation: animation,
-            child: child,
-            builder: (context, child) {
-              final double width = MediaQuery.sizeOf(context).width;
-              final double animationValue = animation.value.clamp(0.0, 1.0);
-              final bool shouldTranslate =
-                  _usesSwipeBackVisual ||
-                  animation.status == AnimationStatus.reverse;
-              final double visualValue = shouldTranslate
-                  ? animationValue
-                  : Curves.easeInOut.transform(animationValue);
+      expectedDuration: transitionDuration,
+      child: _ProfileDetailSwipeBackGesture(
+        route: this,
+        child: AnimatedBuilder(
+          animation: animation,
+          child: child,
+          builder: (context, child) {
+            final double width = MediaQuery.sizeOf(context).width;
+            final double animationValue = animation.value.clamp(0.0, 1.0);
+            final double visualValue = _usesSwipeBackVisual
+                ? animationValue
+                : Curves.easeInOut.transform(animationValue);
 
-              return Transform.translate(
-                offset: Offset(
-                  shouldTranslate ? width * (1 - visualValue) : 0,
-                  0,
+            return Transform.translate(
+              offset: Offset(
+                _usesSwipeBackVisual ? width * (1 - visualValue) : 0,
+                0,
+              ),
+              child: FadeTransition(
+                opacity: AlwaysStoppedAnimation<double>(
+                  _usesSwipeBackVisual ? 1 : visualValue,
                 ),
-                child: FadeTransition(
-                  opacity: AlwaysStoppedAnimation<double>(visualValue),
-                  child: child,
-                ),
-              );
-            },
-          ),
+                child: child,
+              ),
+            );
+          },
         ),
       ),
     );
   }
-}
-
-class _ProfileDetailRouteParallaxSync extends StatefulWidget {
-  const _ProfileDetailRouteParallaxSync({
-    required this.animation,
-    required this.child,
-  });
-
-  final Animation<double> animation;
-  final Widget child;
-
-  @override
-  State<_ProfileDetailRouteParallaxSync> createState() =>
-      _ProfileDetailRouteParallaxSyncState();
-}
-
-class _ProfileDetailRouteParallaxSyncState
-    extends State<_ProfileDetailRouteParallaxSync> {
-  final Object _owner = Object();
-
-  @override
-  void initState() {
-    super.initState();
-    widget.animation.addListener(_syncProgress);
-    _syncProgress();
-  }
-
-  @override
-  void didUpdateWidget(covariant _ProfileDetailRouteParallaxSync oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.animation == widget.animation) {
-      return;
-    }
-    oldWidget.animation.removeListener(_syncProgress);
-    widget.animation.addListener(_syncProgress);
-    _syncProgress();
-  }
-
-  void _syncProgress() {
-    _setProfileDetailRouteParallaxValue(_owner, widget.animation.value);
-  }
 
   @override
   void dispose() {
-    widget.animation.removeListener(_syncProgress);
-    _removeProfileDetailRouteParallaxValue(_owner);
+    _stopSwipeBackProgressSync();
     super.dispose();
   }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }
 
 class _ProfileDetailSwipeBackGesture extends StatelessWidget {
@@ -301,23 +375,50 @@ class _ProfileDetailSwipeBackGesture extends StatelessWidget {
           top: 0,
           bottom: 0,
           width: _profileDetailBackGestureEdgeWidth,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onHorizontalDragStart: (_) => route.startSwipeBack(),
-            onHorizontalDragUpdate: (details) {
-              route.updateSwipeBack(
-                details.primaryDelta ?? 0,
-                MediaQuery.sizeOf(context).width,
-              );
-            },
-            onHorizontalDragEnd: (details) {
-              route.endSwipeBack(details.primaryVelocity ?? 0);
-            },
-            onHorizontalDragCancel: () => route.endSwipeBack(0),
+          child: _ProfileDetailSwipeBackHitTestGate(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragStart: (_) => route.startSwipeBack(),
+              onHorizontalDragUpdate: (details) {
+                route.updateSwipeBack(
+                  details.primaryDelta ?? 0,
+                  MediaQuery.sizeOf(context).width,
+                );
+              },
+              onHorizontalDragEnd: (details) {
+                route.endSwipeBack(
+                  details.primaryVelocity ?? 0,
+                  MediaQuery.sizeOf(context).width,
+                );
+              },
+              onHorizontalDragCancel: () {
+                route.endSwipeBack(0, MediaQuery.sizeOf(context).width);
+              },
+            ),
           ),
         ),
       ],
     );
+  }
+}
+
+class _ProfileDetailSwipeBackHitTestGate extends SingleChildRenderObjectWidget {
+  const _ProfileDetailSwipeBackHitTestGate({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _ProfileDetailSwipeBackHitTestGateRenderBox();
+  }
+}
+
+class _ProfileDetailSwipeBackHitTestGateRenderBox extends RenderProxyBox {
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final Offset globalPosition = localToGlobal(position);
+    if (_isProfileDetailSwipeBackBlocked(globalPosition)) {
+      return false;
+    }
+    return super.hitTest(result, position: position);
   }
 }
 

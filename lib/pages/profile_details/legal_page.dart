@@ -3,10 +3,7 @@ import '../../services/ui_scale.dart';
 import 'profile_detail_page_utils.dart';
 
 class LegalPage extends StatefulWidget {
-  const LegalPage({
-    super.key,
-    this.isDarkOverride,
-  });
+  const LegalPage({super.key, this.isDarkOverride});
 
   final bool? isDarkOverride;
 
@@ -22,14 +19,18 @@ class _LegalPageState extends State<LegalPage>
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
-    final bool isDark = widget.isDarkOverride ??
+    final bool isDark =
+        widget.isDarkOverride ??
         MediaQuery.of(context).platformBrightness == Brightness.dark;
-    final Color bgColor =
-        isDark ? const Color(0xFF020202) : const Color(0xFFE6E6E6);
-    final Color textColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
-    final Color secondaryTextColor =
-        isDark ? Colors.white : const Color(0xFF0D0D0D);
+    final Color bgColor = isDark
+        ? const Color(0xFF020202)
+        : const Color(0xFFE6E6E6);
+    final Color textColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+    final Color secondaryTextColor = isDark
+        ? Colors.white
+        : const Color(0xFF0D0D0D);
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -41,10 +42,9 @@ class _LegalPageState extends State<LegalPage>
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         titleSpacing: null,
-        iconTheme: IconThemeData(
-          color: textColor,
-          size: ui.s(20),
-        ),
+        automaticallyImplyLeading: false,
+        leading: ProfileDetailBackButton(color: textColor, iconSize: ui.s(20)),
+        iconTheme: IconThemeData(color: textColor, size: ui.s(20)),
         title: Text(
           'Rechtliches',
           style: TextStyle(
@@ -57,10 +57,7 @@ class _LegalPageState extends State<LegalPage>
       body: Center(
         child: Text(
           'Diese Seite wird bald verfügbar sein.',
-          style: TextStyle(
-            color: secondaryTextColor,
-            fontSize: ui.s(16),
-          ),
+          style: TextStyle(color: secondaryTextColor, fontSize: ui.s(16)),
         ),
       ),
     );

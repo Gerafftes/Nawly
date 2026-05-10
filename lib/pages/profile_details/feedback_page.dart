@@ -41,6 +41,8 @@ class _FeedbackPageState extends State<FeedbackPage>
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         titleSpacing: null,
+        automaticallyImplyLeading: false,
+        leading: ProfileDetailBackButton(color: textColor, iconSize: ui.s(20)),
         iconTheme: IconThemeData(color: textColor, size: ui.s(20)),
         title: Text(
           'Feedback',
