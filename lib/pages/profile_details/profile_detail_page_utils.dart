@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 const Duration kProfileDetailPushFadeDuration = Duration(milliseconds: 250);
 const Duration kProfileDetailPushAnimationTolerance = Duration(
@@ -12,10 +14,104 @@ const double _profileDetailBackGestureMaxEdgeWidth = 44;
 const double _profileDetailBackGestureCommitProgress = 0.5;
 const double _profileDetailBackGestureMinFlingVelocity = 420;
 
+final Map<Object, bool Function(Offset globalPosition)>
+_profileDetailSwipeBackBlockers = <Object, bool Function(Offset)>{};
+
 abstract class _ProfileDetailSwipeBackHandler {
   void startSwipeBack();
   void updateSwipeBack(double primaryDelta, double width);
   void endSwipeBack(double primaryVelocity);
+}
+
+class ProfileDetailBackButton extends StatelessWidget {
+  const ProfileDetailBackButton({super.key, this.color, this.iconSize});
+
+  final Color? color;
+  final double? iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final double? resolvedIconSize = iconSize == null ? null : iconSize! * 1.4;
+
+    return Semantics(
+      button: true,
+      label: MaterialLocalizations.of(context).backButtonTooltip,
+      child: ExcludeSemantics(
+        child: IconButton(
+          tooltip: null,
+          icon: const Icon(Icons.keyboard_arrow_left),
+          color: color,
+          iconSize: resolvedIconSize,
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              HapticFeedback.selectionClick();
+            }
+            Navigator.maybePop(context);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+bool _isProfileDetailSwipeBackBlocked(Offset globalPosition) {
+  for (final bool Function(Offset globalPosition) blocker
+      in _profileDetailSwipeBackBlockers.values) {
+    if (blocker(globalPosition)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+class ProfileDetailSwipeBackGestureBlocker extends StatefulWidget {
+  const ProfileDetailSwipeBackGestureBlocker({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<ProfileDetailSwipeBackGestureBlocker> createState() =>
+      _ProfileDetailSwipeBackGestureBlockerState();
+}
+
+class _ProfileDetailSwipeBackGestureBlockerState
+    extends State<ProfileDetailSwipeBackGestureBlocker> {
+  final Object _owner = Object();
+  final GlobalKey _key = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _profileDetailSwipeBackBlockers[_owner] = _containsGlobalPosition;
+  }
+
+  bool _containsGlobalPosition(Offset globalPosition) {
+    final BuildContext? context = _key.currentContext;
+    if (context == null) {
+      return false;
+    }
+
+    final RenderObject? renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox ||
+        !renderObject.attached ||
+        !renderObject.hasSize) {
+      return false;
+    }
+
+    final Offset topLeft = renderObject.localToGlobal(Offset.zero);
+    return (topLeft & renderObject.size).contains(globalPosition);
+  }
+
+  @override
+  void dispose() {
+    _profileDetailSwipeBackBlockers.remove(_owner);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return KeyedSubtree(key: _key, child: widget.child);
+  }
 }
 
 Route<T> buildProfileDetailFadeRoute<T>({
@@ -545,23 +641,45 @@ class _ProfileDetailSwipeBackGesture extends StatelessWidget {
           top: padding.top + kToolbarHeight,
           bottom: 0,
           width: edgeWidth,
-          child: GestureDetector(
-            behavior: HitTestBehavior.translucent,
-            onHorizontalDragStart: (_) => route.startSwipeBack(),
-            onHorizontalDragUpdate: (details) {
-              route.updateSwipeBack(
-                details.primaryDelta ?? 0,
-                screenSize.width,
-              );
-            },
-            onHorizontalDragEnd: (details) {
-              route.endSwipeBack(details.primaryVelocity ?? 0);
-            },
-            onHorizontalDragCancel: () => route.endSwipeBack(0),
+          child: _ProfileDetailSwipeBackHitTestGate(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onHorizontalDragStart: (_) => route.startSwipeBack(),
+              onHorizontalDragUpdate: (details) {
+                route.updateSwipeBack(
+                  details.primaryDelta ?? 0,
+                  screenSize.width,
+                );
+              },
+              onHorizontalDragEnd: (details) {
+                route.endSwipeBack(details.primaryVelocity ?? 0);
+              },
+              onHorizontalDragCancel: () => route.endSwipeBack(0),
+            ),
           ),
         ),
       ],
     );
+  }
+}
+
+class _ProfileDetailSwipeBackHitTestGate extends SingleChildRenderObjectWidget {
+  const _ProfileDetailSwipeBackHitTestGate({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) {
+    return _ProfileDetailSwipeBackHitTestGateRenderBox();
+  }
+}
+
+class _ProfileDetailSwipeBackHitTestGateRenderBox extends RenderProxyBox {
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final Offset globalPosition = localToGlobal(position);
+    if (_isProfileDetailSwipeBackBlocked(globalPosition)) {
+      return false;
+    }
+    return super.hitTest(result, position: position);
   }
 }
 

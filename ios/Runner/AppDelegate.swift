@@ -132,18 +132,17 @@ private final class SettingsPermissionCoordinator: NSObject, CLLocationManagerDe
   }
 
   private func requestLocationPermissionIfNeeded() {
-    let status = CLLocationManager.authorizationStatus()
-    guard status == .notDetermined else {
-      finish()
-      return
-    }
-
     DispatchQueue.main.async { [weak self] in
       guard let self else {
         return
       }
 
-      let locationManager = CLLocationManager()
+      let locationManager = self.locationManager ?? CLLocationManager()
+      guard locationManager.authorizationStatus == .notDetermined else {
+        self.finish()
+        return
+      }
+
       locationManager.delegate = self
       self.locationManager = locationManager
       locationManager.requestWhenInUseAuthorization()
@@ -163,11 +162,7 @@ private final class SettingsPermissionCoordinator: NSObject, CLLocationManagerDe
   }
 
   private func currentAuthorizationStatus(for manager: CLLocationManager) -> CLAuthorizationStatus {
-    if #available(iOS 14.0, *) {
-      return manager.authorizationStatus
-    }
-
-    return type(of: manager).authorizationStatus()
+    return manager.authorizationStatus
   }
 
   private func finish() {

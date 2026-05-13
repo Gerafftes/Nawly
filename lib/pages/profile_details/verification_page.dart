@@ -183,7 +183,8 @@ class _VerificationPageState extends State<VerificationPage>
   }
 
   void _openLegalPage() {
-    final bool isDark = widget.isDarkOverride ??
+    final bool isDark =
+        widget.isDarkOverride ??
         MediaQuery.of(context).platformBrightness == Brightness.dark;
     Navigator.of(context).push(
       buildProfileDetailFadeRoute<void>(
@@ -197,21 +198,28 @@ class _VerificationPageState extends State<VerificationPage>
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
     final TextScaler textScaler = MediaQuery.textScalerOf(context);
-    final bool isDark = widget.isDarkOverride ??
+    final bool isDark =
+        widget.isDarkOverride ??
         MediaQuery.of(context).platformBrightness == Brightness.dark;
     final EdgeInsets viewPadding = MediaQuery.of(context).viewPadding;
-    final Color bgColor =
-        isDark ? const Color(0xFF020202) : const Color(0xFFE6E6E6);
-    final Color cardColor =
-        isDark ? const Color(0xFF0D0D0D) : const Color(0xFFF2F2F2);
-    final Color cardColorActive =
-        isDark ? const Color(0xFF1A1A1A) : Colors.white;
-    final Color textColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
-    final Color secondaryTextColor =
-        isDark ? const Color(0xFFB3B3B3) : const Color(0xFF4D4D4D);
-    final Color dividerColor =
-        isDark ? const Color(0xFF1B1B1B) : const Color(0xFFE2E2E2);
+    final Color bgColor = isDark
+        ? const Color(0xFF020202)
+        : const Color(0xFFE6E6E6);
+    final Color cardColor = isDark
+        ? const Color(0xFF0D0D0D)
+        : const Color(0xFFF2F2F2);
+    final Color cardColorActive = isDark
+        ? const Color(0xFF1A1A1A)
+        : Colors.white;
+    final Color textColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+    final Color secondaryTextColor = isDark
+        ? const Color(0xFFB3B3B3)
+        : const Color(0xFF4D4D4D);
+    final Color dividerColor = isDark
+        ? const Color(0xFF1B1B1B)
+        : const Color(0xFFE2E2E2);
     const int totalSteps = 6;
     final int completedSteps = _countCompletedSteps();
     final bool isVerificationComplete = completedSteps == totalSteps;
@@ -244,14 +252,19 @@ class _VerificationPageState extends State<VerificationPage>
       decoration: TextDecoration.underline,
       decorationColor: const Color(0xFF4DAAFC),
     );
-    final String progressTitleText =
-        isVerificationComplete ? 'Verifizierung abgeschlossen' : 'Fortschritt';
+    final String progressTitleText = isVerificationComplete
+        ? 'Verifizierung abgeschlossen'
+        : 'Fortschritt';
     final String progressDescriptionText = isVerificationComplete
         ? 'Alle Angaben wurden\nerfolgreich eingerichtet.'
         : '$completedSteps von $totalSteps abgeschlossen';
     final List<_VerificationEntryData> cards = _cardsForSelectedTab();
-    final Color verificationActionButtonColor =
-        HSLColor.fromAHSL(0.30, 211, 1, 0.5).toColor();
+    final Color verificationActionButtonColor = HSLColor.fromAHSL(
+      0.30,
+      211,
+      1,
+      0.5,
+    ).toColor();
     final Color verifiedActionButtonColor = const Color(0xFF1A1A1A);
 
     return Scaffold(
@@ -265,10 +278,9 @@ class _VerificationPageState extends State<VerificationPage>
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         titleSpacing: null,
-        iconTheme: IconThemeData(
-          color: textColor,
-          size: ui.s(20),
-        ),
+        automaticallyImplyLeading: false,
+        leading: ProfileDetailBackButton(color: textColor, iconSize: ui.s(20)),
+        iconTheme: IconThemeData(color: textColor, size: ui.s(20)),
         title: Text(
           'Verifizierung',
           style: TextStyle(
@@ -315,50 +327,52 @@ class _VerificationPageState extends State<VerificationPage>
                       infoDescriptionLinkStart + infoDescriptionLinkText.length;
                   final List<TextBox> infoDescriptionLinkBoxes =
                       infoDescriptionPainter.getBoxesForSelection(
-                    TextSelection(
-                      baseOffset: infoDescriptionLinkStart,
-                      extentOffset: infoDescriptionLinkEnd,
-                    ),
-                  );
+                        TextSelection(
+                          baseOffset: infoDescriptionLinkStart,
+                          extentOffset: infoDescriptionLinkEnd,
+                        ),
+                      );
                   Rect infoDescriptionLinkRect = Rect.zero;
                   for (final TextBox box in infoDescriptionLinkBoxes) {
                     final Rect boxRect = box.toRect();
                     infoDescriptionLinkRect =
                         infoDescriptionLinkRect == Rect.zero
-                            ? boxRect
-                            : infoDescriptionLinkRect.expandToInclude(boxRect);
+                        ? boxRect
+                        : infoDescriptionLinkRect.expandToInclude(boxRect);
                   }
                   final double infoDescriptionTopOffset =
                       s(17) + s(7) + infoTitlePainter.height + s(2);
                   final Rect infoDescriptionLinkRectInInfoBox =
                       infoDescriptionLinkRect == Rect.zero
-                          ? Rect.zero
-                          : infoDescriptionLinkRect.shift(
-                              Offset(
-                                infoContentInsetLeft,
-                                infoContentInsetTop + infoDescriptionTopOffset,
-                              ),
-                            );
+                      ? Rect.zero
+                      : infoDescriptionLinkRect.shift(
+                          Offset(
+                            infoContentInsetLeft,
+                            infoContentInsetTop + infoDescriptionTopOffset,
+                          ),
+                        );
                   final Rect infoDescriptionLinkTapRect =
                       infoDescriptionLinkRectInInfoBox == Rect.zero
-                          ? Rect.zero
-                          : Rect.fromCenter(
-                              center: infoDescriptionLinkRectInInfoBox.center,
-                              width: infoDescriptionLinkRectInInfoBox.width,
-                              height: math.max(
-                                44.0,
-                                infoDescriptionLinkRectInInfoBox.height,
-                              ),
-                            );
-                  final double infoContentHeight = s(17) +
+                      ? Rect.zero
+                      : Rect.fromCenter(
+                          center: infoDescriptionLinkRectInInfoBox.center,
+                          width: infoDescriptionLinkRectInInfoBox.width,
+                          height: math.max(
+                            44.0,
+                            infoDescriptionLinkRectInInfoBox.height,
+                          ),
+                        );
+                  final double infoContentHeight =
+                      s(17) +
                       s(7) +
                       infoTitlePainter.height +
                       s(2) +
                       infoDescriptionPainter.height;
-                  final double infoBoxHeight = (infoContentInsetTop +
-                          infoContentHeight +
-                          infoContentInsetBottom)
-                      .ceilToDouble();
+                  final double infoBoxHeight =
+                      (infoContentInsetTop +
+                              infoContentHeight +
+                              infoContentInsetBottom)
+                          .ceilToDouble();
                   final double infoBottomExtra = _showVerificationInfoBox
                       ? infoBoxGap + infoBoxHeight + infoBottomInset
                       : 0;
@@ -399,8 +413,9 @@ class _VerificationPageState extends State<VerificationPage>
                                       SizedBox(height: s(26)),
                                       Container(
                                         width: double.infinity,
-                                        constraints:
-                                            BoxConstraints(minHeight: s(100)),
+                                        constraints: BoxConstraints(
+                                          minHeight: s(100),
+                                        ),
                                         child: Stack(
                                           children: [
                                             Positioned(
@@ -413,11 +428,15 @@ class _VerificationPageState extends State<VerificationPage>
                                                   color: cardColor,
                                                   borderRadius:
                                                       BorderRadius.only(
-                                                    topLeft:
-                                                        Radius.circular(s(15)),
-                                                    bottomLeft:
-                                                        Radius.circular(s(15)),
-                                                  ),
+                                                        topLeft:
+                                                            Radius.circular(
+                                                              s(15),
+                                                            ),
+                                                        bottomLeft:
+                                                            Radius.circular(
+                                                              s(15),
+                                                            ),
+                                                      ),
                                                 ),
                                               ),
                                             ),
@@ -431,12 +450,15 @@ class _VerificationPageState extends State<VerificationPage>
                                                   color: cardColor,
                                                   borderRadius:
                                                       BorderRadius.only(
-                                                    topRight: Radius.circular(
-                                                        s(49.5)),
-                                                    bottomRight:
-                                                        Radius.circular(
-                                                            s(49.5)),
-                                                  ),
+                                                        topRight:
+                                                            Radius.circular(
+                                                              s(49.5),
+                                                            ),
+                                                        bottomRight:
+                                                            Radius.circular(
+                                                              s(49.5),
+                                                            ),
+                                                      ),
                                                 ),
                                               ),
                                             ),
@@ -466,7 +488,8 @@ class _VerificationPageState extends State<VerificationPage>
                                                           progressTitleText,
                                                           style: TextStyle(
                                                             color: const Color(
-                                                                0xFFB3B3B3),
+                                                              0xFFB3B3B3,
+                                                            ),
                                                             fontSize: s(16),
                                                             fontWeight:
                                                                 FontWeight.w500,
@@ -489,18 +512,19 @@ class _VerificationPageState extends State<VerificationPage>
                                                   if (isVerificationComplete)
                                                     Padding(
                                                       padding: EdgeInsets.only(
-                                                          right: s(26)),
+                                                        right: s(26),
+                                                      ),
                                                       child: SizedBox(
                                                         width: s(26),
                                                         height: s(26),
-                                                        child: SFSymbolHelper
-                                                            .getIcon(
+                                                        child: SFSymbolHelper.getIcon(
                                                           iconPath:
                                                               'assets/icons/checkmark.circle.fill.svg',
                                                           width: s(26),
                                                           height: s(26),
                                                           color: const Color(
-                                                              0xFF007AFF),
+                                                            0xFF007AFF,
+                                                          ),
                                                         ),
                                                       ),
                                                     )
@@ -508,60 +532,63 @@ class _VerificationPageState extends State<VerificationPage>
                                                     SizedBox(
                                                       width: s(77),
                                                       height: s(77),
-                                                      child:
-                                                          TweenAnimationBuilder<
-                                                              double>(
+                                                      child: TweenAnimationBuilder<double>(
                                                         tween: Tween<double>(
-                                                            end: progress),
+                                                          end: progress,
+                                                        ),
                                                         duration: VerificationPage
                                                             ._progressAnimationDuration,
                                                         curve: Curves
                                                             .easeInOutCubic,
-                                                        builder: (context,
-                                                            animatedProgress,
-                                                            child) {
-                                                          final int
+                                                        builder:
+                                                            (
+                                                              context,
+                                                              animatedProgress,
+                                                              child,
+                                                            ) {
+                                                              final int
                                                               animatedPercent =
-                                                              (animatedProgress *
-                                                                      100)
-                                                                  .round();
-                                                          return Stack(
-                                                            fit:
-                                                                StackFit.expand,
-                                                            children: [
-                                                              CustomPaint(
-                                                                painter:
-                                                                    _VerificationProgressRingPainter(
-                                                                  progress:
-                                                                      animatedProgress,
-                                                                  baseColor:
-                                                                      const Color(
-                                                                          0xFFB3B3B3),
-                                                                  progressColor:
-                                                                      const Color(
-                                                                          0xFF4DAAFC),
-                                                                  strokeWidth:
-                                                                      s(3),
-                                                                ),
-                                                              ),
-                                                              Center(
-                                                                child: Text(
-                                                                  '$animatedPercent%',
-                                                                  style:
-                                                                      TextStyle(
-                                                                    color:
-                                                                        textColor,
-                                                                    fontSize:
-                                                                        s(18),
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
+                                                                  (animatedProgress *
+                                                                          100)
+                                                                      .round();
+                                                              return Stack(
+                                                                fit: StackFit
+                                                                    .expand,
+                                                                children: [
+                                                                  CustomPaint(
+                                                                    painter: _VerificationProgressRingPainter(
+                                                                      progress:
+                                                                          animatedProgress,
+                                                                      baseColor:
+                                                                          const Color(
+                                                                            0xFFB3B3B3,
+                                                                          ),
+                                                                      progressColor:
+                                                                          const Color(
+                                                                            0xFF4DAAFC,
+                                                                          ),
+                                                                      strokeWidth:
+                                                                          s(3),
+                                                                    ),
                                                                   ),
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          );
-                                                        },
+                                                                  Center(
+                                                                    child: Text(
+                                                                      '$animatedPercent%',
+                                                                      style: TextStyle(
+                                                                        color:
+                                                                            textColor,
+                                                                        fontSize:
+                                                                            s(
+                                                                              18,
+                                                                            ),
+                                                                        fontWeight:
+                                                                            FontWeight.w500,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              );
+                                                            },
                                                       ),
                                                     ),
                                                 ],
@@ -589,15 +616,16 @@ class _VerificationPageState extends State<VerificationPage>
                                                 color: cardColor,
                                                 borderRadius:
                                                     BorderRadius.circular(
-                                                        s(15)),
+                                                      s(15),
+                                                    ),
                                               ),
                                             ),
                                             Padding(
                                               padding: EdgeInsets.symmetric(
-                                                  horizontal: s(6)),
+                                                horizontal: s(6),
+                                              ),
                                               child: LayoutBuilder(
-                                                builder:
-                                                    (context, constraints) {
+                                                builder: (context, constraints) {
                                                   final double spacing = s(12);
                                                   final double buttonWidth =
                                                       ((constraints.maxWidth -
@@ -612,7 +640,7 @@ class _VerificationPageState extends State<VerificationPage>
                                                         width: buttonWidth,
                                                         isSelected:
                                                             _selectedPayoutIndex ==
-                                                                0,
+                                                            0,
                                                         onTap: () => setState(
                                                           () =>
                                                               _selectedPayoutIndex =
@@ -634,7 +662,7 @@ class _VerificationPageState extends State<VerificationPage>
                                                         width: buttonWidth,
                                                         isSelected:
                                                             _selectedPayoutIndex ==
-                                                                1,
+                                                            1,
                                                         onTap: () => setState(
                                                           () =>
                                                               _selectedPayoutIndex =
@@ -656,7 +684,7 @@ class _VerificationPageState extends State<VerificationPage>
                                                         width: buttonWidth,
                                                         isSelected:
                                                             _selectedPayoutIndex ==
-                                                                2,
+                                                            2,
                                                         onTap: () => setState(
                                                           () =>
                                                               _selectedPayoutIndex =
@@ -686,8 +714,11 @@ class _VerificationPageState extends State<VerificationPage>
                                         color: cardColor,
                                         borderRadius: s(15),
                                         children: [
-                                          for (final MapEntry<int,
-                                                  _VerificationEntryData> cardEntry
+                                          for (final MapEntry<
+                                                int,
+                                                _VerificationEntryData
+                                              >
+                                              cardEntry
                                               in cards.asMap().entries)
                                             VerifizierungCard(
                                               title: cardEntry.value.title,
@@ -698,8 +729,8 @@ class _VerificationPageState extends State<VerificationPage>
                                                   cardEntry.value.accessLabel,
                                               color: cardColor,
                                               textColor: textColor,
-                                              buttonColor: _statusFor(
-                                                          cardEntry.value) ==
+                                              buttonColor:
+                                                  _statusFor(cardEntry.value) ==
                                                       _VerificationStatus
                                                           .verified
                                                   ? verifiedActionButtonColor
@@ -708,23 +739,24 @@ class _VerificationPageState extends State<VerificationPage>
                                                   secondaryTextColor,
                                               buttonTextColor:
                                                   _statusFor(cardEntry.value) ==
-                                                          _VerificationStatus
-                                                              .verified
-                                                      ? const Color(0xFFF2F2F2)
-                                                      : const Color(0xFF4DAAFC),
+                                                      _VerificationStatus
+                                                          .verified
+                                                  ? const Color(0xFFF2F2F2)
+                                                  : const Color(0xFF4DAAFC),
                                               buttonLabel:
                                                   _statusFor(cardEntry.value) ==
-                                                          _VerificationStatus
-                                                              .verified
-                                                      ? 'Bearbeiten'
-                                                      : 'Verifizieren',
+                                                      _VerificationStatus
+                                                          .verified
+                                                  ? 'Bearbeiten'
+                                                  : 'Verifizieren',
                                               onButtonTap: () =>
                                                   _handleVerificationTap(
-                                                cardEntry.value,
-                                              ),
+                                                    cardEntry.value,
+                                                  ),
                                               showVerified: true,
                                               embedInGroup: true,
-                                              showDivider: cardEntry.key !=
+                                              showDivider:
+                                                  cardEntry.key !=
                                                   cards.length - 1,
                                               dividerColor: dividerColor,
                                             ),
@@ -775,28 +807,31 @@ class _VerificationPageState extends State<VerificationPage>
                                               builder: (context) {
                                                 final TextStyle badgeTextStyle =
                                                     TextStyle(
-                                                  color:
-                                                      const Color(0xFF4DAAFC),
-                                                  fontSize: s(12),
-                                                  fontWeight: FontWeight.w400,
-                                                  height: 1.0,
+                                                      color: const Color(
+                                                        0xFF4DAAFC,
+                                                      ),
+                                                      fontSize: s(12),
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                      height: 1.0,
+                                                    );
+                                                final double badgeBaseWidth = s(
+                                                  36,
                                                 );
-                                                final double badgeBaseWidth =
-                                                    s(36);
                                                 final double
-                                                    badgeBaseTextWidth =
+                                                badgeBaseTextWidth =
                                                     measureTextWidth(
-                                                  'Neu',
-                                                  badgeTextStyle,
-                                                );
+                                                      'Neu',
+                                                      badgeTextStyle,
+                                                    );
                                                 final double
-                                                    badgeHorizontalPadding =
+                                                badgeHorizontalPadding =
                                                     badgeBaseWidth >
-                                                            badgeBaseTextWidth
-                                                        ? (badgeBaseWidth -
-                                                                badgeBaseTextWidth) /
-                                                            2
-                                                        : 0;
+                                                        badgeBaseTextWidth
+                                                    ? (badgeBaseWidth -
+                                                              badgeBaseTextWidth) /
+                                                          2
+                                                    : 0;
                                                 return Container(
                                                   height: s(17),
                                                   padding: EdgeInsets.symmetric(
@@ -812,8 +847,8 @@ class _VerificationPageState extends State<VerificationPage>
                                                     ).toColor(),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                      s(7),
-                                                    ),
+                                                          s(7),
+                                                        ),
                                                   ),
                                                   alignment: Alignment.center,
                                                   child: Text(
@@ -845,8 +880,8 @@ class _VerificationPageState extends State<VerificationPage>
                                                     Rect.zero &&
                                                 infoDescriptionLinkTapRect
                                                     .contains(
-                                                  details.localPosition,
-                                                )) {
+                                                      details.localPosition,
+                                                    )) {
                                               _openLegalPage();
                                             }
                                           },
@@ -901,20 +936,14 @@ class _VerificationPageState extends State<VerificationPage>
                   );
                 },
               )
-            : _VerificationPageSkeleton(
-                s: s,
-                isDark: isDark,
-              ),
+            : _VerificationPageSkeleton(s: s, isDark: isDark),
       ),
     );
   }
 }
 
 class _VerificationPageSkeleton extends StatelessWidget {
-  const _VerificationPageSkeleton({
-    required this.s,
-    required this.isDark,
-  });
+  const _VerificationPageSkeleton({required this.s, required this.isDark});
 
   final double Function(double) s;
   final bool isDark;
@@ -925,12 +954,7 @@ class _VerificationPageSkeleton extends StatelessWidget {
       axisDirection: AxisDirection.down,
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          s(16),
-          0,
-          s(16),
-          s(20),
-        ),
+        padding: EdgeInsets.fromLTRB(s(16), 0, s(16), s(20)),
         children: [
           SizedBox(height: s(26)),
           ProfileDetailSkeletonBlock(
@@ -1044,7 +1068,8 @@ class VerifizierungCard extends StatelessWidget {
       return painter.height;
     }
 
-    final double startCardHeight = ui.s(15) +
+    final double startCardHeight =
+        ui.s(15) +
         measureSingleLineHeight(titleStyle) +
         ui.s(10.5) +
         measureSingleLineHeight(
@@ -1068,12 +1093,7 @@ class VerifizierungCard extends StatelessWidget {
     final Widget content = SizedBox(
       height: startCardHeight,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          ui.s(18),
-          ui.s(15),
-          ui.s(18),
-          ui.s(10),
-        ),
+        padding: EdgeInsets.fromLTRB(ui.s(18), ui.s(15), ui.s(18), ui.s(10)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -1128,10 +1148,7 @@ class VerifizierungCard extends StatelessWidget {
                         ),
                         SizedBox(width: ui.s(6)),
                       ],
-                      Text(
-                        accessLabel,
-                        style: priceStyle,
-                      ),
+                      Text(accessLabel, style: priceStyle),
                     ],
                   ),
                 ],
@@ -1198,9 +1215,7 @@ class _VerificationEntryGroup extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: Column(
-          children: children,
-        ),
+        child: Column(children: children),
       ),
     );
   }
@@ -1360,10 +1375,8 @@ class _VerificationOptionButton extends StatelessWidget {
         duration: const Duration(milliseconds: 320),
         switchInCurve: Curves.easeIn,
         switchOutCurve: Curves.easeOut,
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
         child: SizedBox(
           key: ValueKey<bool>(isSelected),
           width: width,

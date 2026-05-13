@@ -31,49 +31,50 @@ class _NotificationsPageState extends State<NotificationsPage>
     with ProfileDetailPerformanceMixin<NotificationsPage> {
   static const List<_NotificationSectionData> _notificationSections =
       <_NotificationSectionData>[
-    _NotificationSectionData(
-      title: 'Aktivität',
-      description: 'Jobs und neue Kontakte in deiner Nähe.',
-      preferences: <_NotificationPreferenceData>[
-        _NotificationPreferenceData(
-          key: _NotificationPreferenceKey.jobOffers,
-          title: 'Jobangebote',
-          supportingText: 'Anfragen, Änderungen und\nBestätigungen',
+        _NotificationSectionData(
+          title: 'Aktivität',
+          description: 'Jobs und neue Kontakte in deiner Nähe.',
+          preferences: <_NotificationPreferenceData>[
+            _NotificationPreferenceData(
+              key: _NotificationPreferenceKey.jobOffers,
+              title: 'Jobangebote',
+              supportingText: 'Anfragen, Änderungen und\nBestätigungen',
+            ),
+            _NotificationPreferenceData(
+              key: _NotificationPreferenceKey.messages,
+              title: 'Nachrichten',
+              supportingText: 'Benachrichtigungen zu neuen\nChat-Nachrichten.',
+            ),
+          ],
         ),
-        _NotificationPreferenceData(
-          key: _NotificationPreferenceKey.messages,
-          title: 'Nachrichten',
-          supportingText: 'Benachrichtigungen zu neuen\nChat-Nachrichten.',
+        _NotificationSectionData(
+          title: 'Wichtige Hinweise',
+          description: 'Zahlungen und Sicherheit getrennt steuerbar.',
+          badgeText: 'Empfohlen',
+          preferences: <_NotificationPreferenceData>[
+            _NotificationPreferenceData(
+              key: _NotificationPreferenceKey.payments,
+              title: 'Zahlungen & Auszahlungen',
+              supportingText:
+                  'Eingänge, Auszahlungen und\nProbleme mit Auszahlungen.',
+            ),
+            _NotificationPreferenceData(
+              key: _NotificationPreferenceKey.security,
+              title: 'Sicherheitswarnungen',
+              supportingText:
+                  'Neue Logins und Änderungen an\nKonto oder Finanzen.',
+            ),
+          ],
         ),
-      ],
-    ),
-    _NotificationSectionData(
-      title: 'Wichtige Hinweise',
-      description: 'Zahlungen und Sicherheit getrennt steuerbar.',
-      badgeText: 'Empfohlen',
-      preferences: <_NotificationPreferenceData>[
-        _NotificationPreferenceData(
-          key: _NotificationPreferenceKey.payments,
-          title: 'Zahlungen & Auszahlungen',
-          supportingText:
-              'Eingänge, Auszahlungen und\nProbleme mit Auszahlungen.',
-        ),
-        _NotificationPreferenceData(
-          key: _NotificationPreferenceKey.security,
-          title: 'Sicherheitswarnungen',
-          supportingText: 'Neue Logins und Änderungen an\nKonto oder Finanzen.',
-        ),
-      ],
-    ),
-  ];
+      ];
 
   final Map<_NotificationPreferenceKey, bool> _enabledPreferences =
       <_NotificationPreferenceKey, bool>{
-    _NotificationPreferenceKey.jobOffers: false,
-    _NotificationPreferenceKey.messages: false,
-    _NotificationPreferenceKey.payments: false,
-    _NotificationPreferenceKey.security: false,
-  };
+        _NotificationPreferenceKey.jobOffers: false,
+        _NotificationPreferenceKey.messages: false,
+        _NotificationPreferenceKey.payments: false,
+        _NotificationPreferenceKey.security: false,
+      };
 
   bool _showNotificationsInfoBox = true;
 
@@ -100,19 +101,25 @@ class _NotificationsPageState extends State<NotificationsPage>
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
-    final bool isDark = widget.isDarkOverride ??
+    final bool isDark =
+        widget.isDarkOverride ??
         MediaQuery.of(context).platformBrightness == Brightness.dark;
     final EdgeInsets viewPadding = MediaQuery.of(context).viewPadding;
-    final Color bgColor =
-        isDark ? const Color(0xFF020202) : const Color(0xFFE6E6E6);
-    final Color textColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
-    final Color secondaryTextColor =
-        isDark ? const Color(0xFFB3B3B3) : const Color(0xFF4D4D4D);
-    final Color cardColor =
-        isDark ? const Color(0xFF0D0D0D) : const Color(0xFFF2F2F2);
-    final Color dividerColor =
-        isDark ? const Color(0xFF1B1B1B) : const Color(0xFFE2E2E2);
+    final Color bgColor = isDark
+        ? const Color(0xFF020202)
+        : const Color(0xFFE6E6E6);
+    final Color textColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+    final Color secondaryTextColor = isDark
+        ? const Color(0xFFB3B3B3)
+        : const Color(0xFF4D4D4D);
+    final Color cardColor = isDark
+        ? const Color(0xFF0D0D0D)
+        : const Color(0xFFF2F2F2);
+    final Color dividerColor = isDark
+        ? const Color(0xFF1B1B1B)
+        : const Color(0xFFE2E2E2);
     final bool includeAllSections = !widget.prewarm || widget.prewarmPhase > 0;
     final List<_NotificationSectionData> visibleSections = includeAllSections
         ? _notificationSections
@@ -120,8 +127,9 @@ class _NotificationsPageState extends State<NotificationsPage>
     final double infoBoxGap = s(19);
     final bool shouldBuildInfoBox = isInitialContentReady && includeAllSections;
     final bool showInfoBox = shouldBuildInfoBox && _showNotificationsInfoBox;
-    final double reservedBottomInset =
-        showInfoBox ? s(138) + viewPadding.bottom + infoBoxGap : 0;
+    final double reservedBottomInset = showInfoBox
+        ? s(138) + viewPadding.bottom + infoBoxGap
+        : 0;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -134,10 +142,9 @@ class _NotificationsPageState extends State<NotificationsPage>
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         titleSpacing: null,
-        iconTheme: IconThemeData(
-          color: textColor,
-          size: ui.s(20),
-        ),
+        automaticallyImplyLeading: false,
+        leading: ProfileDetailBackButton(color: textColor, iconSize: ui.s(20)),
+        iconTheme: IconThemeData(color: textColor, size: ui.s(20)),
         title: Text(
           'Benachrichtigungen',
           style: TextStyle(
@@ -172,10 +179,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                         });
                       },
                     )
-                  : _NotificationsSkeleton(
-                      s: s,
-                      isDark: isDark,
-                    ),
+                  : _NotificationsSkeleton(s: s, isDark: isDark),
             ),
             if (shouldBuildInfoBox)
               Positioned(
@@ -249,12 +253,7 @@ class _NotificationsContent extends StatelessWidget {
         ),
         slivers: [
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(
-              s(16),
-              0,
-              s(16),
-              bottomPadding,
-            ),
+            padding: EdgeInsets.fromLTRB(s(16), 0, s(16), bottomPadding),
             sliver: SliverToBoxAdapter(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,10 +284,7 @@ class _NotificationsContent extends StatelessWidget {
 }
 
 class _NotificationsSkeleton extends StatelessWidget {
-  const _NotificationsSkeleton({
-    required this.s,
-    required this.isDark,
-  });
+  const _NotificationsSkeleton({required this.s, required this.isDark});
 
   final double Function(double) s;
   final bool isDark;
@@ -299,12 +295,7 @@ class _NotificationsSkeleton extends StatelessWidget {
       axisDirection: AxisDirection.down,
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          s(16),
-          0,
-          s(16),
-          s(28),
-        ),
+        padding: EdgeInsets.fromLTRB(s(16), 0, s(16), s(28)),
         children: [
           SizedBox(height: s(26)),
           ProfileDetailSkeletonBlock(
@@ -359,8 +350,9 @@ class _NotificationsInfoOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final double infoBoxRadius = s(15);
     final double infoContentInset = s(8);
-    final double infoBadgeRadius =
-        (infoBoxRadius - infoContentInset).clamp(0.0, infoBoxRadius).toDouble();
+    final double infoBadgeRadius = (infoBoxRadius - infoContentInset)
+        .clamp(0.0, infoBoxRadius)
+        .toDouble();
     const String infoTitleText = 'Wichtige Benachrichtigungen';
     const String infoDescriptionText =
         'Sicherheits- und Zahlungsinfos helfen dir, keine wichtigen Änderungen zu verpassen.';
@@ -378,10 +370,7 @@ class _NotificationsInfoOverlay extends StatelessWidget {
     return GlassPressable(
       borderRadius: infoBoxRadius,
       child: GlassSurface(
-        config: LiquidGlassStyle.infoBox(
-          isDark: isDark,
-          s: s,
-        ),
+        config: LiquidGlassStyle.infoBox(isDark: isDark, s: s),
         isDark: isDark,
         borderRadius: infoBoxRadius,
         child: Padding(
@@ -396,9 +385,7 @@ class _NotificationsInfoOverlay extends StatelessWidget {
             children: [
               Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    right: s(12),
-                  ),
+                  padding: EdgeInsets.only(right: s(12)),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -409,8 +396,12 @@ class _NotificationsInfoOverlay extends StatelessWidget {
                           vertical: s(2),
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              HSLColor.fromAHSL(0.3, 211, 1.0, 0.50).toColor(),
+                          color: HSLColor.fromAHSL(
+                            0.3,
+                            211,
+                            1.0,
+                            0.50,
+                          ).toColor(),
                           borderRadius: BorderRadius.circular(infoBadgeRadius),
                         ),
                         child: Text(
@@ -424,15 +415,9 @@ class _NotificationsInfoOverlay extends StatelessWidget {
                         ),
                       ),
                       SizedBox(height: s(7)),
-                      Text(
-                        infoTitleText,
-                        style: infoTitleStyle,
-                      ),
+                      Text(infoTitleText, style: infoTitleStyle),
                       SizedBox(height: s(2)),
-                      Text(
-                        infoDescriptionText,
-                        style: infoDescriptionStyle,
-                      ),
+                      Text(infoDescriptionText, style: infoDescriptionStyle),
                     ],
                   ),
                 ),
@@ -448,10 +433,7 @@ class _NotificationsInfoOverlay extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.topRight,
                       child: Padding(
-                        padding: EdgeInsets.only(
-                          top: s(2),
-                          right: s(2),
-                        ),
+                        padding: EdgeInsets.only(top: s(2), right: s(2)),
                         child: SFSymbolHelper.getIcon(
                           iconPath: 'assets/icons/close.svg',
                           width: s(12),
@@ -514,10 +496,7 @@ class _NotificationSection extends StatelessWidget {
             if (section.badgeText != null) ...[
               SizedBox(width: s(8)),
               Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: s(8),
-                  vertical: s(4),
-                ),
+                padding: EdgeInsets.symmetric(horizontal: s(8), vertical: s(4)),
                 decoration: BoxDecoration(
                   color: HSLColor.fromAHSL(0.3, 211, 1.0, 0.50).toColor(),
                   borderRadius: BorderRadius.circular(s(100)),
@@ -553,7 +532,7 @@ class _NotificationSection extends StatelessWidget {
                   dividerColor: dividerColor,
                   isEnabled:
                       enabledPreferences[section.preferences[index].key] ??
-                          false,
+                      false,
                   showDivider: index != section.preferences.length - 1,
                   onChanged: (value) =>
                       onChanged(section.preferences[index].key, value),
@@ -596,12 +575,7 @@ class _NotificationPreferenceRow extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(
-            ui.s(18),
-            ui.s(16),
-            ui.s(18),
-            ui.s(16),
-          ),
+          padding: EdgeInsets.fromLTRB(ui.s(18), ui.s(16), ui.s(18), ui.s(16)),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -650,10 +624,7 @@ class _NotificationPreferenceRow extends StatelessWidget {
         if (showDivider)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: ui.s(18)),
-            child: Container(
-              height: 1,
-              color: dividerColor,
-            ),
+            child: Container(height: 1, color: dividerColor),
           ),
       ],
     );

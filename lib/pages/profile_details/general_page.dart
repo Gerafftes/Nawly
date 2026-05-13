@@ -7,11 +7,7 @@ import '../../widgets/adaptive_bottom_sheet.dart';
 import 'profile_detail_page_utils.dart';
 
 class GeneralPage extends StatefulWidget {
-  const GeneralPage({
-    super.key,
-    this.isDarkOverride,
-    this.prewarm = false,
-  });
+  const GeneralPage({super.key, this.isDarkOverride, this.prewarm = false});
 
   final bool? isDarkOverride;
   final bool prewarm;
@@ -111,12 +107,10 @@ class _GeneralPageState extends State<GeneralPage>
     }
 
     setState(() {
-      _mountedPersistentOverlayHosts.addAll(
-        const <_GeneralOverlayType>[
-          _GeneralOverlayType.displayName,
-          _GeneralOverlayType.skills,
-        ],
-      );
+      _mountedPersistentOverlayHosts.addAll(const <_GeneralOverlayType>[
+        _GeneralOverlayType.displayName,
+        _GeneralOverlayType.skills,
+      ]);
     });
   }
 
@@ -282,8 +276,9 @@ class _GeneralPageState extends State<GeneralPage>
       return;
     }
 
-    final String resolvedValue =
-        nextValue.isEmpty ? (config.initialFieldValue ?? '') : nextValue;
+    final String resolvedValue = nextValue.isEmpty
+        ? (config.initialFieldValue ?? '')
+        : nextValue;
 
     config.onSave?.call(resolvedValue);
     controller.value = TextEditingValue(
@@ -358,26 +353,41 @@ class _GeneralPageState extends State<GeneralPage>
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
-    final bool isDark = widget.isDarkOverride ??
+    final bool isDark =
+        widget.isDarkOverride ??
         MediaQuery.of(context).platformBrightness == Brightness.dark;
-    final Color bgColor =
-        isDark ? const Color(0xFF020202) : const Color(0xFFE6E6E6);
-    final Color cardColor =
-        isDark ? const Color(0xFF0D0D0D) : const Color(0xFFF2F2F2);
-    final Color textColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
-    final Color secondaryTextColor =
-        isDark ? const Color(0xFFB3B3B3) : const Color(0xFF4D4D4D);
-    final Color dividerColor =
-        isDark ? const Color(0xFF1B1B1B) : const Color(0xFFE2E2E2);
+    final Color bgColor = isDark
+        ? const Color(0xFF020202)
+        : const Color(0xFFE6E6E6);
+    final Color cardColor = isDark
+        ? const Color(0xFF0D0D0D)
+        : const Color(0xFFF2F2F2);
+    final Color textColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+    final Color secondaryTextColor = isDark
+        ? const Color(0xFFB3B3B3)
+        : const Color(0xFF4D4D4D);
+    final Color dividerColor = isDark
+        ? const Color(0xFF1B1B1B)
+        : const Color(0xFFE2E2E2);
     final Color buttonColor = isDark ? const Color(0xFF1A1A1A) : Colors.white;
-    final Color buttonTextColor =
-        isDark ? const Color(0xFFF2F2F2) : const Color(0xFF0D0D0D);
-    final Color addButtonColor =
-        HSLColor.fromAHSL(0.30, 211, 1.0, 0.50).toColor();
+    final Color buttonTextColor = isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+    final Color addButtonColor = HSLColor.fromAHSL(
+      0.30,
+      211,
+      1.0,
+      0.50,
+    ).toColor();
     const Color addButtonTextColor = Color(0xFF4DAAFC);
-    final Color destructiveButtonColor =
-        HSLColor.fromAHSL(0.30, 9, 0.65, 0.54).toColor();
+    final Color destructiveButtonColor = HSLColor.fromAHSL(
+      0.30,
+      9,
+      0.65,
+      0.54,
+    ).toColor();
     const Color destructiveButtonTextColor = Color(0xFFD6543D);
     final double generalActionButtonWidth = s(121);
     final double generalActionButtonHeight = s(44);
@@ -402,10 +412,12 @@ class _GeneralPageState extends State<GeneralPage>
           surfaceTintColor: Colors.transparent,
           centerTitle: true,
           titleSpacing: null,
-          iconTheme: IconThemeData(
+          automaticallyImplyLeading: false,
+          leading: ProfileDetailBackButton(
             color: textColor,
-            size: ui.s(20),
+            iconSize: ui.s(20),
           ),
+          iconTheme: IconThemeData(color: textColor, size: ui.s(20)),
           title: Text(
             'Allgemein',
             style: TextStyle(
@@ -613,10 +625,7 @@ class _GeneralPageState extends State<GeneralPage>
                         ],
                       ),
                     )
-                  : _GeneralPageSkeleton(
-                      s: s,
-                      isDark: isDark,
-                    ),
+                  : _GeneralPageSkeleton(s: s, isDark: isDark),
             ),
             if (_hasMountedPersistentOverlayHosts)
               Positioned.fill(
@@ -638,15 +647,17 @@ class _GeneralPageState extends State<GeneralPage>
                   skillsValidationErrorText: _skillsValidationErrorText,
                   displayNameIsAddButtonActive:
                       _isAddButtonActiveForOverlayType(
-                    _GeneralOverlayType.displayName,
-                  ),
+                        _GeneralOverlayType.displayName,
+                      ),
                   skillsIsAddButtonActive: _isAddButtonActiveForOverlayType(
                     _GeneralOverlayType.skills,
                   ),
-                  displayNamePerformanceStopwatch:
-                      _overlayStopwatchForType(_GeneralOverlayType.displayName),
-                  skillsPerformanceStopwatch:
-                      _overlayStopwatchForType(_GeneralOverlayType.skills),
+                  displayNamePerformanceStopwatch: _overlayStopwatchForType(
+                    _GeneralOverlayType.displayName,
+                  ),
+                  skillsPerformanceStopwatch: _overlayStopwatchForType(
+                    _GeneralOverlayType.skills,
+                  ),
                   onDismiss: _dismissGeneralOverlay,
                   onDisplayNameDraftChanged: (value) {
                     _handleOverlayDraftChanged(
@@ -682,10 +693,7 @@ class _GeneralPageState extends State<GeneralPage>
 }
 
 class _GeneralPageSkeleton extends StatelessWidget {
-  const _GeneralPageSkeleton({
-    required this.s,
-    required this.isDark,
-  });
+  const _GeneralPageSkeleton({required this.s, required this.isDark});
 
   final double Function(double) s;
   final bool isDark;
@@ -696,12 +704,7 @@ class _GeneralPageSkeleton extends StatelessWidget {
       axisDirection: AxisDirection.down,
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          s(16),
-          0,
-          s(16),
-          s(20),
-        ),
+        padding: EdgeInsets.fromLTRB(s(16), 0, s(16), s(20)),
         children: [
           SizedBox(height: s(26)),
           ProfileDetailSkeletonBlock(
@@ -963,7 +966,9 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
   void didUpdateWidget(covariant _GeneralOverlaySheet oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (identical(
-        oldWidget.performanceStopwatch, widget.performanceStopwatch)) {
+      oldWidget.performanceStopwatch,
+      widget.performanceStopwatch,
+    )) {
       return;
     }
 
@@ -1017,8 +1022,9 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
         MediaQuery.of(context).padding.right + s(16);
     final double overlaySafeBottom = MediaQuery.of(context).viewPadding.bottom;
     final BorderRadius fieldBorderRadius = BorderRadius.circular(s(15));
-    final Widget? centeredContent =
-        widget.config.centeredContentBuilder?.call(context);
+    final Widget? centeredContent = widget.config.centeredContentBuilder?.call(
+      context,
+    );
     final Widget fieldEditor = widget.config.initialFieldValue == null
         ? const SizedBox.shrink()
         : Column(
@@ -1070,7 +1076,8 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
                             ),
                             hintText: widget.config.fieldHintText,
                             hintStyle: TextStyle(
-                              color: widget.config.fieldHintColor ??
+                              color:
+                                  widget.config.fieldHintColor ??
                                   const Color(0xFF747474),
                               fontSize: s(18),
                               fontWeight: FontWeight.bold,
@@ -1095,7 +1102,7 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
                                 style: TextStyle(
                                   color: widget.textController.text.isEmpty
                                       ? widget.config.fieldHintColor ??
-                                          const Color(0xFF747474)
+                                            const Color(0xFF747474)
                                       : const Color(0xFFF2F2F2),
                                   fontSize: s(18),
                                   fontWeight: widget.textController.text.isEmpty
@@ -1232,7 +1239,8 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
                                   SizedBox(
                                     height: s(
                                       widget
-                                          .config.fieldTopSpacingFromSubtitle!,
+                                          .config
+                                          .fieldTopSpacingFromSubtitle!,
                                     ),
                                   ),
                                 fieldEditor,
@@ -1396,10 +1404,7 @@ class _SkillChipRowState extends State<_SkillChipRow> {
 }
 
 class _SkillChipItem {
-  _SkillChipItem({
-    required this.id,
-    required this.label,
-  });
+  _SkillChipItem({required this.id, required this.label});
 
   final int id;
   final String label;
@@ -1407,10 +1412,7 @@ class _SkillChipItem {
 }
 
 class _SkillChip extends StatelessWidget {
-  const _SkillChip({
-    required this.label,
-    this.onRemove,
-  });
+  const _SkillChip({required this.label, this.onRemove});
 
   final String label;
   final VoidCallback? onRemove;
@@ -1568,8 +1570,7 @@ class _AppSettingsRow extends StatelessWidget {
       children: [
         Text(value, style: valueTextStyle),
         SizedBox(width: ui.s(11)),
-        Icon(
-          Icons.chevron_right,
+        SFSymbolHelper.getChevronRight(
           color: const Color(0xFFF2F2F2),
           size: ui.s(26),
         ),
@@ -1655,13 +1656,9 @@ class _AppSettingsTrailingActionState
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                widget.label,
-                style: widget.textStyle,
-              ),
+              Text(widget.label, style: widget.textStyle),
               SizedBox(width: ui.s(11)),
-              Icon(
-                Icons.chevron_right,
+              SFSymbolHelper.getChevronRight(
                 color: const Color(0xFFF2F2F2),
                 size: ui.s(26),
               ),
@@ -1741,12 +1738,7 @@ class _GeneralInfoCard extends StatelessWidget {
       height: 1.4,
     );
     final Widget content = Padding(
-      padding: EdgeInsets.fromLTRB(
-        ui.s(18),
-        ui.s(15),
-        ui.s(18),
-        ui.s(10),
-      ),
+      padding: EdgeInsets.fromLTRB(ui.s(18), ui.s(15), ui.s(18), ui.s(10)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -1865,9 +1857,7 @@ class _GeneralInfoGroup extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(borderRadius),
-        child: Column(
-          children: children,
-        ),
+        child: Column(children: children),
       ),
     );
   }
@@ -1931,10 +1921,7 @@ class _GeneralActionButtonState extends State<_GeneralActionButton> {
                 color: widget.backgroundColor,
                 borderRadius: borderRadius,
                 border: widget.borderColor != null
-                    ? Border.all(
-                        color: widget.borderColor!,
-                        width: 1,
-                      )
+                    ? Border.all(color: widget.borderColor!, width: 1)
                     : null,
               ),
               child: Center(

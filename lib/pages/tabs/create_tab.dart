@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../services/sf_symbol_helper.dart';
 import '../../services/ui_scale.dart';
 
 class CreateTabContent extends StatefulWidget {
@@ -142,10 +143,9 @@ class _CreateTabContentState extends State<CreateTabContent> {
                           ),
                           Positioned(
                             right: s(30),
-                            child: Icon(
-                              Icons.chevron_right,
+                            child: SFSymbolHelper.getChevronRight(
                               color: const Color(0xFFF2F2F2),
-                              size: s(24),
+                              size: s(28),
                             ),
                           ),
                         ],

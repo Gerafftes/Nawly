@@ -74,33 +74,31 @@ class JobCard extends StatelessWidget {
     );
     final double footerHeight = measureSingleLineHeight(priceStyle);
     final double wrappedSecondaryLineHeight = secondaryLineHeight * 2;
-    final double reservedSecondaryLineHeight =
-        showFooter ? secondaryLineHeight : wrappedSecondaryLineHeight;
+    final double reservedSecondaryLineHeight = showFooter
+        ? secondaryLineHeight
+        : wrappedSecondaryLineHeight;
     final double reservedFooterHeight = showFooter
         ? footerHeight
         : math.max(
             0,
             secondaryLineHeight + footerHeight - wrappedSecondaryLineHeight,
           );
-    final double contentHeight = measureSingleLineHeight(titleStyle) +
+    final double contentHeight =
+        measureSingleLineHeight(titleStyle) +
         ui.s(10.5) +
         reservedSecondaryLineHeight +
         reservedFooterHeight;
     final double cardHeight = ui.s(15) + math.max(contentHeight, 44) + ui.s(10);
-    final String secondaryLineText =
-        distance != null ? '${distance!} · $time' : time;
+    final String secondaryLineText = distance != null
+        ? '${distance!} · $time'
+        : time;
     final double secondaryLineTopOffset =
         measureSingleLineHeight(titleStyle) + ui.s(10.5);
 
     return Container(
       width: double.infinity,
       height: cardHeight,
-      padding: EdgeInsets.fromLTRB(
-        ui.s(18),
-        ui.s(15),
-        ui.s(18),
-        ui.s(10),
-      ),
+      padding: EdgeInsets.fromLTRB(ui.s(18), ui.s(15), ui.s(18), ui.s(10)),
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(ui.s(15)),
@@ -191,10 +189,7 @@ class JobCard extends StatelessWidget {
                         ),
                         SizedBox(width: ui.s(6)),
                       ],
-                      Text(
-                        price,
-                        style: priceStyle,
-                      ),
+                      Text(price, style: priceStyle),
                     ],
                   )
                 else
@@ -223,10 +218,7 @@ class JobCard extends StatelessWidget {
               elevation: 0,
             ),
             onPressed: () {},
-            child: Text(
-              buttonLabel,
-              style: TextStyle(color: buttonTextColor),
-            ),
+            child: Text(buttonLabel, style: TextStyle(color: buttonTextColor)),
           ),
         ],
       ),
