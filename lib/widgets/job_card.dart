@@ -88,7 +88,7 @@ class JobCard extends StatelessWidget {
         reservedFooterHeight;
     final double cardHeight = ui.s(15) + math.max(contentHeight, 44) + ui.s(10);
     final String secondaryLineText =
-        distance != null ? '${distance!} | $time' : time;
+        distance != null ? '${distance!} · $time' : time;
     final double secondaryLineTopOffset =
         measureSingleLineHeight(titleStyle) + ui.s(10.5);
 
