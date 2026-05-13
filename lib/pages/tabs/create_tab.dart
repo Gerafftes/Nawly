@@ -78,29 +78,48 @@ class _CreateTabContentState extends State<CreateTabContent> {
               ),
             ),
             Positioned(
-              left: s(85),
+              left: s(18),
               right: s(18),
               top: s(15),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: const Color(0xFFF2F2F2),
-                      fontSize: s(21),
-                      fontWeight: FontWeight.bold,
-                      height: 1,
+                  Padding(
+                    padding: EdgeInsets.only(left: s(67)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: const Color(0xFFF2F2F2),
+                            fontSize: s(21),
+                            fontWeight: FontWeight.bold,
+                            height: 1,
+                          ),
+                        ),
+                        SizedBox(height: s(10)),
+                        Text(
+                          description,
+                          style: TextStyle(
+                            color: const Color(0xFFB3B3B3),
+                            fontSize: s(13),
+                            fontWeight: FontWeight.bold,
+                            height: 1.2,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  SizedBox(height: s(12)),
+                  Container(height: 1, color: const Color(0xFF1B1B1B)),
                   SizedBox(height: s(10)),
                   Text(
-                    description,
+                    'Beispiele',
                     style: TextStyle(
                       color: const Color(0xFFB3B3B3),
-                      fontSize: s(13),
-                      fontWeight: FontWeight.bold,
-                      height: 1.2,
+                      fontSize: s(12),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
