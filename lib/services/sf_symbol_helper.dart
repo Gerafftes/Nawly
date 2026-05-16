@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -130,6 +129,30 @@ class SFSymbolHelper {
       name: 'wrench.and.screwdriver.fill',
       fallbackIcon: CupertinoIcons.wrench,
     ),
+    'cart.badge.clock.fill': _SFSymbolIconDefinition(
+      name: 'cart.badge.clock.fill',
+      fallbackIcon: Icons.shopping_cart_rounded,
+    ),
+    'pawprint.fill': _SFSymbolIconDefinition(
+      name: 'pawprint.fill',
+      fallbackIcon: Icons.pets_rounded,
+    ),
+    'shippingbox.fill': _SFSymbolIconDefinition(
+      name: 'shippingbox.fill',
+      fallbackIcon: Icons.inventory_2_rounded,
+    ),
+    'book.fill': _SFSymbolIconDefinition(
+      name: 'book.fill',
+      fallbackIcon: CupertinoIcons.book_fill,
+    ),
+    'tree.fill': _SFSymbolIconDefinition(
+      name: 'tree.fill',
+      fallbackIcon: Icons.park_rounded,
+    ),
+    'macbook.and.iphone': _SFSymbolIconDefinition(
+      name: 'macbook.and.iphone',
+      fallbackIcon: Icons.devices_rounded,
+    ),
   };
 
   static const Set<String> _rawSvgIcons = {
@@ -173,6 +196,7 @@ class SFSymbolHelper {
     double? width,
     double? height,
     Color? color,
+    AppleLiquidSymbolWeight? weight,
   }) {
     final _SFSymbolIconDefinition? iconDefinition = _iconDefinitions[iconPath];
     if (iconDefinition != null) {
@@ -185,6 +209,7 @@ class SFSymbolHelper {
             iconDefinition.name,
             size: resolvedSize,
             color: color,
+            weight: weight,
             fallbackIcon: iconDefinition.fallbackIcon,
           ),
         ),
