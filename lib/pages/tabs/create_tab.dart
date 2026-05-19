@@ -53,6 +53,7 @@ class _CreateTabContentState extends State<CreateTabContent> {
       required String title,
       required String description,
       required String buttonText,
+      required String iconPath,
       required List<_CreateExampleChipData> examples,
     }) {
       return SizedBox(
@@ -76,6 +77,14 @@ class _CreateTabContentState extends State<CreateTabContent> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF141414),
                   borderRadius: BorderRadius.circular(s(9)),
+                ),
+                child: Center(
+                  child: SFSymbolHelper.getIcon(
+                    iconPath: iconPath,
+                    width: s(26),
+                    height: s(26),
+                    color: const Color(0xFFEBEBEB),
+                  ),
                 ),
               ),
             ),
@@ -214,6 +223,7 @@ class _CreateTabContentState extends State<CreateTabContent> {
               description:
                   'Erstelle einen konkreten Auftrag damit ihn andere für dich erledigen.',
               buttonText: 'Einmaligen Job erstellen',
+              iconPath: 'assets/icons/briefcase.fill.svg',
               examples: const <_CreateExampleChipData>[
                 _CreateExampleChipData(
                   label: 'Einkaufen',
@@ -243,6 +253,7 @@ class _CreateTabContentState extends State<CreateTabContent> {
               title: 'Dauerhafter Service',
               description: 'Biete einen Service an den andere buchen können.',
               buttonText: 'Service anbieten',
+              iconPath: 'assets/icons/list.bullet.rectangle.portrait.fill.svg',
               examples: const <_CreateExampleChipData>[
                 _CreateExampleChipData(
                   label: 'Nachhilfe',
