@@ -123,8 +123,6 @@ class _CreateTabContentState extends State<CreateTabContent> {
                       ],
                     ),
                   ),
-                  SizedBox(height: s(12)),
-                  Container(height: 1, color: const Color(0xFF1B1B1B)),
                   Expanded(
                     child: Padding(
                       padding: EdgeInsets.only(bottom: s(7)),
@@ -132,6 +130,8 @@ class _CreateTabContentState extends State<CreateTabContent> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Container(height: 1, color: const Color(0xFF1B1B1B)),
+                          SizedBox(height: s(5)),
                           Text(
                             'Beispiele',
                             style: TextStyle(
@@ -220,9 +220,8 @@ class _CreateTabContentState extends State<CreateTabContent> {
             SizedBox(height: s(26)),
             createCard(
               title: 'Einmaliger Job',
-              description:
-                  'Erstelle einen konkreten Auftrag damit ihn andere für dich erledigen.',
-              buttonText: 'Einmaligen Job erstellen',
+              description: 'Für eine Aufgabe, die jemand für dich erledigt.',
+              buttonText: 'Job erstellen',
               iconPath: 'assets/icons/briefcase.fill.svg',
               examples: const <_CreateExampleChipData>[
                 _CreateExampleChipData(
@@ -250,8 +249,8 @@ class _CreateTabContentState extends State<CreateTabContent> {
             ),
             SizedBox(height: s(29)),
             createCard(
-              title: 'Dauerhafter Service',
-              description: 'Biete einen Service an den andere buchen können.',
+              title: 'Service anbieten',
+              description: 'Werde für deine Hilfe buchbar.',
               buttonText: 'Service anbieten',
               iconPath: 'assets/icons/list.bullet.rectangle.portrait.fill.svg',
               examples: const <_CreateExampleChipData>[

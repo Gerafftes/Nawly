@@ -2,7 +2,7 @@ PODS:
   - Flutter (1.0.0)
   - flutter_native_splash (2.4.3):
     - Flutter
-  - mjn_liquid_ui (0.1.9):
+  - mjn_liquid_ui (0.2.4):
     - Flutter
   - sensors_plus (0.0.1):
     - Flutter
@@ -32,7 +32,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
-  mjn_liquid_ui: 2834b774892fe19ba5296949ef161be4d962ee39
+  mjn_liquid_ui: 60174c10d8ee10442f808cf4f6916aa83114aaa8
   sensors_plus: 6a11ed0c2e1d0bd0b20b4029d3bad27d96e0c65b
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
 
