@@ -467,7 +467,6 @@ class _HomeScreenState extends State<HomeScreen>
     final double bottomNavHeight = s(64);
     final double profileBottomGap = s(19);
     final double profileBottomBoxHeight = s(116);
-    final double appBarTitleWidth = s(280);
     final Color bgColor = isDark
         ? const Color(0xFF020202)
         : const Color(0xFFE6E6E6);
@@ -505,10 +504,16 @@ class _HomeScreenState extends State<HomeScreen>
         _bottomNavIndex != _profileTabIndex &&
         _bottomNavIndex != _createTabIndex;
     final bool showCreateTitle = _bottomNavIndex == _createTabIndex;
+    final bool showActivityTitle = _bottomNavIndex == _activityTabIndex;
     final bool showBrandTitle =
-        _bottomNavIndex != _profileTabIndex && !showCreateTitle;
+        !showActivityTitle &&
+        _bottomNavIndex != _profileTabIndex &&
+        !showCreateTitle;
     final bool showAppBarChrome =
-        showBellButton || showBrandTitle || showCreateTitle;
+        showBellButton ||
+        showBrandTitle ||
+        showCreateTitle ||
+        showActivityTitle;
 
     Widget content;
     switch (selectedIndex) {
@@ -647,15 +652,7 @@ class _HomeScreenState extends State<HomeScreen>
           );
         case _activityTabIndex:
           return withPullToRefresh(
-            ActivityTabContent(
-              cardColor: cardColor,
-              textColor: textColor,
-              secondaryTextColor: secondaryText,
-              jobCardColor: jobCardColor,
-              jobButtonColor: jobButtonColor,
-              timeTextColor: timeTextColor,
-              buttonTextColor: buttonTextColor,
-            ),
+            ActivityTabContent(jobCardColor: jobCardColor),
             padding: EdgeInsets.only(
               top: topBarInset,
               bottom: s(92),
@@ -729,31 +726,6 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 child: profileTabContent,
               );
-              final WidgetBuilder? detailPageBuilder =
-                  _lastProfileDetailPageBuilder;
-              final double openSwipeProgress = _profileDetailOpenSwipeProgress
-                  .clamp(0.0, 1.0)
-                  .toDouble();
-              final bool showOpenSwipeStack =
-                  _showProfileDetailOpenSwipeStack && detailPageBuilder != null;
-              final Widget child = !showOpenSwipeStack
-                  ? profileTab
-                  : Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        profileTab,
-                        IgnorePointer(
-                          child: Transform.translate(
-                            offset: Offset(width * (1 - openSwipeProgress), 0),
-                            child: _buildProfileDetailSwipePreview(
-                              pageBuilder: detailPageBuilder,
-                              mediaQuery: rootMediaQuery,
-                              theme: rootTheme,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
 
               return GestureDetector(
                 behavior: HitTestBehavior.translucent,
@@ -765,7 +737,7 @@ class _HomeScreenState extends State<HomeScreen>
                   _endProfileDetailOpenSwipe(details, width);
                 },
                 onHorizontalDragCancel: _cancelProfileDetailOpenSwipe,
-                child: child,
+                child: profileTab,
               );
             },
           );
@@ -817,119 +789,73 @@ class _HomeScreenState extends State<HomeScreen>
             },
           ),
         ),
-        leadingWidth: s(56),
-        leading: AnimatedSwitcher(
-          duration: _tabFadeInDuration,
-          reverseDuration: _tabFadeOutDuration,
-          switchInCurve: Curves.easeIn,
-          switchOutCurve: Curves.easeOut,
-          layoutBuilder: (currentChild, previousChildren) {
-            return Stack(
-              alignment: Alignment.center,
-              children: [...previousChildren, ?currentChild],
-            );
-          },
-          transitionBuilder: (child, animation) => FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeInOut,
-            ),
-            child: child,
-          ),
-          child: !showBellButton
-              ? const SizedBox(key: ValueKey<String>('appbar-no-bell'))
-              : IconButton(
-                  key: const ValueKey<String>('appbar-bell'),
-                  icon: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Icon(
-                        Icons.notifications_none,
-                        color: bellIconColor,
-                        size: s(28),
-                      ),
-                      Positioned(
-                        top: s(-2),
-                        right: s(-2),
-                        child: Container(
-                          width: s(8),
-                          height: s(8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFF2121),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    ],
+        automaticallyImplyLeading: false,
+        titleSpacing: 0,
+        leadingWidth: showCreateTitle || showActivityTitle ? 0 : s(56),
+        leading: showCreateTitle || showActivityTitle
+            ? const SizedBox.shrink()
+            : AnimatedSwitcher(
+                duration: _tabFadeInDuration,
+                reverseDuration: _tabFadeOutDuration,
+                switchInCurve: Curves.easeIn,
+                switchOutCurve: Curves.easeOut,
+                layoutBuilder: (currentChild, previousChildren) {
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [...previousChildren, ?currentChild],
+                  );
+                },
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeInOut,
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _resetProfileDetailOpenSwipeState();
-                      if (_bottomNavIndex == _notificationsTabIndex) {
-                        _bottomNavIndex = _mainTabIndex;
-                      } else {
-                        if (_bottomNavIndex <= _createTabIndex) {
-                          _mainTabIndex = _bottomNavIndex;
-                        }
-                        _bottomNavIndex = _notificationsTabIndex;
-                      }
-                    });
-                    _syncDelayedProfileWarmup();
-                  },
+                  child: child,
                 ),
-        ),
-        title: SizedBox(
-          width: appBarTitleWidth,
-          height: kToolbarHeight,
-          child: AnimatedSwitcher(
-            duration: _tabFadeInDuration,
-            reverseDuration: _tabFadeOutDuration,
-            switchInCurve: Curves.easeIn,
-            switchOutCurve: Curves.easeOut,
-            layoutBuilder: (currentChild, previousChildren) {
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  for (final child in previousChildren) Center(child: child),
-                  if (currentChild != null) Center(child: currentChild),
-                ],
-              );
-            },
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
+                child: !showBellButton
+                    ? const SizedBox(key: ValueKey<String>('appbar-no-bell'))
+                    : IconButton(
+                        key: ValueKey<String>('appbar-bell-$_bottomNavIndex'),
+                        icon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Icon(
+                              Icons.notifications_none,
+                              color: bellIconColor,
+                              size: s(28),
+                            ),
+                            Positioned(
+                              top: s(-2),
+                              right: s(-2),
+                              child: Container(
+                                width: s(8),
+                                height: s(8),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFF2121),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _resetProfileDetailOpenSwipeState();
+                            if (_bottomNavIndex == _notificationsTabIndex) {
+                              _bottomNavIndex = _mainTabIndex;
+                            } else {
+                              if (_bottomNavIndex <= _createTabIndex) {
+                                _mainTabIndex = _bottomNavIndex;
+                              }
+                              _bottomNavIndex = _notificationsTabIndex;
+                            }
+                          });
+                          _syncDelayedProfileWarmup();
+                        },
+                      ),
               ),
-              child: child,
-            ),
-            child: showCreateTitle
-                ? Text(
-                    'Was möchtest du erstellen?',
-                    key: const ValueKey<String>('appbar-create-title'),
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: s(20),
-                    ),
-                  )
-                : !showBrandTitle
-                ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
-                : Text(
-                    'MiniJobNow',
-                    key: const ValueKey<String>('appbar-title'),
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: s(28),
-                    ),
-                  ),
-          ),
-        ),
-        centerTitle: true,
+        title: const SizedBox.shrink(),
+        centerTitle: false,
       ),
       body: Stack(
         children: [
@@ -977,6 +903,74 @@ class _HomeScreenState extends State<HomeScreen>
                     child: SizedBox(height: topBarInset),
                   );
                 },
+              ),
+            ),
+          ),
+          Positioned(
+            top: viewPadding.top,
+            left: 0,
+            right: 0,
+            height: kToolbarHeight,
+            child: IgnorePointer(
+              child: AnimatedSwitcher(
+                duration: _tabFadeInDuration,
+                reverseDuration: _tabFadeOutDuration,
+                switchInCurve: Curves.easeIn,
+                switchOutCurve: Curves.easeOut,
+                layoutBuilder: (currentChild, previousChildren) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      for (final child in previousChildren)
+                        Center(child: child),
+                      if (currentChild != null) Center(child: currentChild),
+                    ],
+                  );
+                },
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeInOut,
+                  ),
+                  child: child,
+                ),
+                child: showCreateTitle
+                    ? Text(
+                        'Was möchtest du erstellen?',
+                        key: const ValueKey<String>('appbar-create-title'),
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: s(22),
+                        ),
+                      )
+                    : showActivityTitle
+                    ? Text(
+                        'Deine Aufträge',
+                        key: const ValueKey<String>('appbar-activity-title'),
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.w600,
+                          fontSize: s(22),
+                        ),
+                      )
+                    : !showBrandTitle
+                    ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
+                    : Text(
+                        'MiniJobNow',
+                        key: const ValueKey<String>('appbar-title'),
+                        maxLines: 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: textColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: s(28),
+                        ),
+                      ),
               ),
             ),
           ),
@@ -1045,6 +1039,40 @@ class _HomeScreenState extends State<HomeScreen>
       ),
     );
 
+    final Widget scaffoldWithSwipeOverlay = LayoutBuilder(
+      builder: (context, constraints) {
+        final WidgetBuilder? detailPageBuilder = _lastProfileDetailPageBuilder;
+        final bool showOpenSwipeStack =
+            _showProfileDetailOpenSwipeStack && detailPageBuilder != null;
+        final double openSwipeProgress = _profileDetailOpenSwipeProgress
+            .clamp(0.0, 1.0)
+            .toDouble();
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            scaffold,
+            if (showOpenSwipeStack)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Transform.translate(
+                    offset: Offset(
+                      constraints.maxWidth * (1 - openSwipeProgress),
+                      0,
+                    ),
+                    child: _buildProfileDetailSwipePreview(
+                      pageBuilder: detailPageBuilder,
+                      mediaQuery: rootMediaQuery,
+                      theme: rootTheme,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlayStyle,
       child: Theme(
@@ -1054,7 +1082,7 @@ class _HomeScreenState extends State<HomeScreen>
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 500),
           color: bgColor,
-          child: scaffold,
+          child: scaffoldWithSwipeOverlay,
         ),
       ),
     );
