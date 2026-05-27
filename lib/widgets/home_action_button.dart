@@ -54,18 +54,18 @@ class HomeActionButton extends StatelessWidget {
               children: [
                 SFSymbolHelper.getIcon(
                   iconPath: iconPath,
-                  width: ui.s(26),
-                  height: ui.s(26),
+                  width: ui.s(32),
+                  height: ui.s(32),
                   color: iconColor,
                 ),
-                SizedBox(height: ui.s(8)),
+                SizedBox(height: ui.s(1)),
                 Text(
                   label,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: textColor,
                     fontWeight: FontWeight.w600,
-                    fontSize: ui.s(13),
+                    fontSize: ui.s(14),
                   ),
                 ),
               ],

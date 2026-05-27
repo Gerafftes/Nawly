@@ -153,6 +153,14 @@ class SFSymbolHelper {
       name: 'macbook.and.iphone',
       fallbackIcon: Icons.devices_rounded,
     ),
+    'alarm.fill': _SFSymbolIconDefinition(
+      name: 'alarm.fill',
+      fallbackIcon: Icons.alarm_rounded,
+    ),
+    'hourglass': _SFSymbolIconDefinition(
+      name: 'hourglass',
+      fallbackIcon: Icons.hourglass_empty_rounded,
+    ),
   };
 
   static const Set<String> _rawSvgIcons = {
@@ -306,6 +314,10 @@ class SFSymbolHelper {
         return Icons.storefront_rounded;
       case 'briefcase.fill':
         return Icons.work_rounded;
+      case 'alarm.fill':
+        return Icons.alarm_rounded;
+      case 'hourglass':
+        return Icons.hourglass_empty_rounded;
       case 'wrench.and.screwdriver':
       case 'wrench.and.screwdriver.fill':
         return CupertinoIcons.wrench;

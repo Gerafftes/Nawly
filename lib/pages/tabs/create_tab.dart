@@ -81,8 +81,8 @@ class _CreateTabContentState extends State<CreateTabContent> {
                 child: Center(
                   child: SFSymbolHelper.getIcon(
                     iconPath: iconPath,
-                    width: s(26),
-                    height: s(26),
+                    width: s(30),
+                    height: s(30),
                     color: const Color(0xFFEBEBEB),
                   ),
                 ),

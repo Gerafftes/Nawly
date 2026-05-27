@@ -2357,6 +2357,59 @@ class _PaymentsPageState extends State<PaymentsPage>
                                             ),
                                           ),
                                           SizedBox(height: s(0)),
+                                        ] else if (_standardPayoutIndex ==
+                                            null) ...[
+                                          SizedBox(height: s(26)),
+                                          ProfileDetailSwipeBackGestureBlocker(
+                                            child: Semantics(
+                                              button: true,
+                                              label:
+                                                  'Jetzt Auszahlung hinzufügen',
+                                              child: GestureDetector(
+                                                behavior:
+                                                    HitTestBehavior.opaque,
+                                                onTap: () {
+                                                  if (_selectedPayoutIndex ==
+                                                      2) {
+                                                    setState(() {
+                                                      _selectedPayoutIndex = 0;
+                                                    });
+                                                  }
+                                                  _showFilterOverlay();
+                                                },
+                                                child: Container(
+                                                  height: s(60),
+                                                  width: double.infinity,
+                                                  decoration: BoxDecoration(
+                                                    color: HSLColor.fromAHSL(
+                                                      0.3,
+                                                      211,
+                                                      1.0,
+                                                      0.50,
+                                                    ).toColor(),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          s(15),
+                                                        ),
+                                                  ),
+                                                  alignment: Alignment.center,
+                                                  child: Text(
+                                                    'Jetzt Auszahlung hinzufügen',
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      color: const Color(
+                                                        0xFF4DAAFC,
+                                                      ),
+                                                      fontSize: s(17),
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(height: s(0)),
                                         ] else ...[
                                           SizedBox(height: s(0)),
                                         ],
