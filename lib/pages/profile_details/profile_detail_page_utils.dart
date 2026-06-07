@@ -39,6 +39,10 @@ class ProfileDetailBackButton extends StatelessWidget {
       child: ExcludeSemantics(
         child: IconButton(
           tooltip: null,
+          style: const ButtonStyle(
+            backgroundColor: WidgetStatePropertyAll<Color>(Colors.transparent),
+            overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
+          ),
           icon: const Icon(Icons.keyboard_arrow_left),
           color: color,
           iconSize: resolvedIconSize,
@@ -764,11 +768,15 @@ mixin ProfileDetailPerformanceMixin<T extends StatefulWidget> on State<T> {
       return;
     }
     _hasLoggedFirstContentFrame = true;
+    final bool wasWarmed = ProfileDetailWarmupRegistry.instance.isWarmed(
+      profileDetailWarmupKey,
+    );
     ProfileDetailWarmupRegistry.instance.markWarmed(profileDetailWarmupKey);
     _profileDetailStopwatch.stop();
     debugPrint(
       '[$profileDetailPerformanceLabel] first content frame: '
-      '${_profileDetailStopwatch.elapsedMilliseconds} ms',
+      '${_profileDetailStopwatch.elapsedMilliseconds} ms, '
+      'warmed=$wasWarmed',
     );
   }
 

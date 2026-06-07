@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../liquid_glass/liquid_glass.dart';
@@ -10,18 +12,17 @@ enum _NotificationPreferenceKey { jobOffers, messages, payments, security }
 const Duration _notificationsInfoOverlayTransitionDuration = Duration(
   milliseconds: 180,
 );
+const Duration _notificationsSwitchMountDelay = Duration(milliseconds: 290);
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({
     super.key,
     this.isDarkOverride,
     this.prewarm = false,
-    this.prewarmPhase = 1,
   });
 
   final bool? isDarkOverride;
   final bool prewarm;
-  final int prewarmPhase;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
@@ -77,25 +78,51 @@ class _NotificationsPageState extends State<NotificationsPage>
       };
 
   bool _showNotificationsInfoBox = true;
+  Timer? _switchMountTimer;
+  bool _areSwitchesMounted = false;
 
   @override
-  String get profileDetailPerformanceLabel {
-    if (widget.prewarm && widget.prewarmPhase == 0) {
-      return 'NotificationsPage:phase_1';
-    }
-    return 'NotificationsPage';
-  }
-
-  @override
-  String get profileDetailWarmupKey {
-    if (widget.prewarm && widget.prewarmPhase == 0) {
-      return 'NotificationsPage.phase_1';
-    }
-    return 'NotificationsPage';
-  }
+  String get profileDetailPerformanceLabel => 'NotificationsPage';
 
   @override
   bool get isProfileDetailWarmup => widget.prewarm;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.prewarm) {
+      _areSwitchesMounted = true;
+      return;
+    }
+    _switchMountTimer = Timer(_notificationsSwitchMountDelay, _mountSwitches);
+  }
+
+  @override
+  void dispose() {
+    _switchMountTimer?.cancel();
+    super.dispose();
+  }
+
+  void _mountSwitches() {
+    if (!mounted || _areSwitchesMounted) {
+      return;
+    }
+
+    final Stopwatch stopwatch = Stopwatch()..start();
+    setState(() {
+      _areSwitchesMounted = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      stopwatch.stop();
+      debugPrint(
+        '[NotificationsPage] switches frame: '
+        '${stopwatch.elapsedMilliseconds} ms',
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,12 +147,8 @@ class _NotificationsPageState extends State<NotificationsPage>
     final Color dividerColor = isDark
         ? const Color(0xFF1B1B1B)
         : const Color(0xFFE2E2E2);
-    final bool includeAllSections = !widget.prewarm || widget.prewarmPhase > 0;
-    final List<_NotificationSectionData> visibleSections = includeAllSections
-        ? _notificationSections
-        : _notificationSections.take(1).toList(growable: false);
     final double infoBoxGap = s(19);
-    final bool shouldBuildInfoBox = isInitialContentReady && includeAllSections;
+    final bool shouldBuildInfoBox = isInitialContentReady;
     final bool showInfoBox = shouldBuildInfoBox && _showNotificationsInfoBox;
     final double reservedBottomInset = showInfoBox
         ? s(138) + viewPadding.bottom + infoBoxGap
@@ -170,8 +193,9 @@ class _NotificationsPageState extends State<NotificationsPage>
                       secondaryTextColor: secondaryTextColor,
                       cardColor: cardColor,
                       dividerColor: dividerColor,
-                      sections: visibleSections,
+                      sections: _notificationSections,
                       bottomPadding: reservedBottomInset,
+                      mountSwitches: _areSwitchesMounted,
                       enabledPreferences: _enabledPreferences,
                       onChanged: (_NotificationPreferenceKey key, bool value) {
                         setState(() {
@@ -228,6 +252,7 @@ class _NotificationsContent extends StatelessWidget {
     required this.dividerColor,
     required this.sections,
     required this.bottomPadding,
+    required this.mountSwitches,
     required this.enabledPreferences,
     required this.onChanged,
   });
@@ -240,6 +265,7 @@ class _NotificationsContent extends StatelessWidget {
   final Color dividerColor;
   final List<_NotificationSectionData> sections;
   final double bottomPadding;
+  final bool mountSwitches;
   final Map<_NotificationPreferenceKey, bool> enabledPreferences;
   final void Function(_NotificationPreferenceKey key, bool value) onChanged;
 
@@ -268,6 +294,7 @@ class _NotificationsContent extends StatelessWidget {
                       cardColor: cardColor,
                       dividerColor: dividerColor,
                       section: sections[index],
+                      mountSwitches: mountSwitches,
                       enabledPreferences: enabledPreferences,
                       onChanged: onChanged,
                     ),
@@ -462,6 +489,7 @@ class _NotificationSection extends StatelessWidget {
     required this.cardColor,
     required this.dividerColor,
     required this.section,
+    required this.mountSwitches,
     required this.enabledPreferences,
     required this.onChanged,
   });
@@ -473,6 +501,7 @@ class _NotificationSection extends StatelessWidget {
   final Color cardColor;
   final Color dividerColor;
   final _NotificationSectionData section;
+  final bool mountSwitches;
   final Map<_NotificationPreferenceKey, bool> enabledPreferences;
   final void Function(_NotificationPreferenceKey key, bool value) onChanged;
 
@@ -530,6 +559,7 @@ class _NotificationSection extends StatelessWidget {
                   titleColor: textColor,
                   supportingTextColor: secondaryTextColor,
                   dividerColor: dividerColor,
+                  mountSwitches: mountSwitches,
                   isEnabled:
                       enabledPreferences[section.preferences[index].key] ??
                       false,
@@ -553,6 +583,7 @@ class _NotificationPreferenceRow extends StatelessWidget {
     required this.titleColor,
     required this.supportingTextColor,
     required this.dividerColor,
+    required this.mountSwitches,
     required this.isEnabled,
     required this.showDivider,
     required this.onChanged,
@@ -564,6 +595,7 @@ class _NotificationPreferenceRow extends StatelessWidget {
   final Color titleColor;
   final Color supportingTextColor;
   final Color dividerColor;
+  final bool mountSwitches;
   final bool isEnabled;
   final bool showDivider;
   final ValueChanged<bool> onChanged;
@@ -612,11 +644,13 @@ class _NotificationPreferenceRow extends StatelessWidget {
               SizedBox(width: ui.s(12)),
               Padding(
                 padding: EdgeInsets.only(top: ui.s(4)),
-                child: GlassSwitch(
-                  isDark: isDark,
-                  value: isEnabled,
-                  onChanged: onChanged,
-                ),
+                child: mountSwitches
+                    ? GlassSwitch(
+                        isDark: isDark,
+                        value: isEnabled,
+                        onChanged: onChanged,
+                      )
+                    : _NotificationSwitchPlaceholder(isDark: isDark),
               ),
             ],
           ),
@@ -627,6 +661,48 @@ class _NotificationPreferenceRow extends StatelessWidget {
             child: Container(height: 1, color: dividerColor),
           ),
       ],
+    );
+  }
+}
+
+class _NotificationSwitchPlaceholder extends StatelessWidget {
+  const _NotificationSwitchPlaceholder({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final ui = UiScale.of(context, designWidth: 402);
+    final Color trackColor = isDark
+        ? const Color(0xFF1A1A1A)
+        : const Color(0xFFE0E0E0);
+    final Color thumbColor = isDark
+        ? const Color(0xFF4A4A4A)
+        : const Color(0xFFFFFFFF);
+
+    return SizedBox(
+      width: ui.s(72),
+      height: ui.s(60),
+      child: Center(
+        child: Container(
+          width: ui.s(52),
+          height: ui.s(31),
+          padding: EdgeInsets.all(ui.s(3)),
+          decoration: BoxDecoration(
+            color: trackColor,
+            borderRadius: BorderRadius.circular(ui.s(16)),
+          ),
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: ui.s(25),
+            height: ui.s(25),
+            decoration: BoxDecoration(
+              color: thumbColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

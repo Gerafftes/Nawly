@@ -28,20 +28,18 @@ const Set<String> kProfileDetailWarmupIconPaths = <String>{
 
 const List<ProfileDetailPrewarmTarget> kProfileDetailPrewarmOrder =
     <ProfileDetailPrewarmTarget>[
-      ProfileDetailPrewarmTarget.notificationsPhase1,
+      ProfileDetailPrewarmTarget.general,
       ProfileDetailPrewarmTarget.notifications,
-      ProfileDetailPrewarmTarget.verification,
       ProfileDetailPrewarmTarget.paymentsPhase1,
       ProfileDetailPrewarmTarget.paymentsPhase2,
       ProfileDetailPrewarmTarget.payments,
-      ProfileDetailPrewarmTarget.general,
+      ProfileDetailPrewarmTarget.verification,
       ProfileDetailPrewarmTarget.legal,
       ProfileDetailPrewarmTarget.affiliate,
       ProfileDetailPrewarmTarget.feedback,
     ];
 
 enum ProfileDetailPrewarmTarget {
-  notificationsPhase1,
   notifications,
   verification,
   paymentsPhase1,
@@ -56,8 +54,6 @@ enum ProfileDetailPrewarmTarget {
 extension ProfileDetailPrewarmTargetX on ProfileDetailPrewarmTarget {
   String get warmupKey {
     switch (this) {
-      case ProfileDetailPrewarmTarget.notificationsPhase1:
-        return 'NotificationsPage.phase_1';
       case ProfileDetailPrewarmTarget.notifications:
         return 'NotificationsPage';
       case ProfileDetailPrewarmTarget.verification:
@@ -115,18 +111,8 @@ class ProfileDetailPrewarmHost extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     switch (target) {
-      case ProfileDetailPrewarmTarget.notificationsPhase1:
-        return NotificationsPage(
-          isDarkOverride: isDark,
-          prewarm: true,
-          prewarmPhase: 0,
-        );
       case ProfileDetailPrewarmTarget.notifications:
-        return NotificationsPage(
-          isDarkOverride: isDark,
-          prewarm: true,
-          prewarmPhase: 1,
-        );
+        return NotificationsPage(isDarkOverride: isDark, prewarm: true);
       case ProfileDetailPrewarmTarget.verification:
         return VerificationPage(isDarkOverride: isDark, prewarm: true);
       case ProfileDetailPrewarmTarget.paymentsPhase1:

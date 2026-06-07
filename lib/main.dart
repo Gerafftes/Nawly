@@ -91,6 +91,7 @@ class _HomeScreenState extends State<HomeScreen>
   String _themeMode = 'auto';
   bool _showShakeOverlay = false;
   bool _showProfileInfoBox = true;
+  bool _isProfileDetailRouteOpen = false;
   bool _showProfileDetailOpenSwipeStack = false;
   bool _openProfileDetailAfterSwipeAnimation = false;
   double _profileDetailOpenDragDistance = 0;
@@ -157,15 +158,37 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  void _pauseProfileWarmupForDetailRoute() {
+    _profileWarmupTimer?.cancel();
+    _profileWarmupTimer = null;
+    setState(() {
+      _isProfileDetailRouteOpen = true;
+      _activeProfileWarmupTarget = null;
+    });
+  }
+
+  void _resumeProfileWarmupAfterDetailRoute() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isProfileDetailRouteOpen = false;
+    });
+    _syncDelayedProfileWarmup();
+  }
+
   void _pushWithFade(Widget page) {
-    Navigator.of(context).push(
-      buildProfileDetailFadeRoute<void>(
-        page: page,
-        onBackgroundProgressChanged: _setProfileDetailBackgroundParallax,
-        transitionDuration: _tabFadeInDuration,
-        reverseTransitionDuration: _tabFadeOutDuration,
-      ),
-    );
+    _pauseProfileWarmupForDetailRoute();
+    Navigator.of(context)
+        .push(
+          buildProfileDetailFadeRoute<void>(
+            page: page,
+            onBackgroundProgressChanged: _setProfileDetailBackgroundParallax,
+            transitionDuration: _tabFadeInDuration,
+            reverseTransitionDuration: _tabFadeOutDuration,
+          ),
+        )
+        .whenComplete(_resumeProfileWarmupAfterDetailRoute);
   }
 
   void _pushWithSwipe(
@@ -173,14 +196,17 @@ class _HomeScreenState extends State<HomeScreen>
     Duration transitionDuration = kProfileDetailSwipeDuration,
     Duration? reverseTransitionDuration,
   }) {
-    Navigator.of(context).push(
-      buildProfileDetailSwipeRoute<void>(
-        page: page,
-        onBackgroundProgressChanged: _setProfileDetailBackgroundParallax,
-        transitionDuration: transitionDuration,
-        reverseTransitionDuration: reverseTransitionDuration,
-      ),
-    );
+    _pauseProfileWarmupForDetailRoute();
+    Navigator.of(context)
+        .push(
+          buildProfileDetailSwipeRoute<void>(
+            page: page,
+            onBackgroundProgressChanged: _setProfileDetailBackgroundParallax,
+            transitionDuration: transitionDuration,
+            reverseTransitionDuration: reverseTransitionDuration,
+          ),
+        )
+        .whenComplete(_resumeProfileWarmupAfterDetailRoute);
   }
 
   void _openProfileDetailPage(WidgetBuilder pageBuilder) {
@@ -403,7 +429,8 @@ class _HomeScreenState extends State<HomeScreen>
     _profileWarmupTimer?.cancel();
     _profileWarmupTimer = null;
 
-    if (_bottomNavIndex != _startTabIndex ||
+    if (_isProfileDetailRouteOpen ||
+        _bottomNavIndex != _startTabIndex ||
         _activeProfileWarmupTarget != null) {
       return;
     }
@@ -414,6 +441,7 @@ class _HomeScreenState extends State<HomeScreen>
 
     _profileWarmupTimer = Timer(delay, () {
       if (!mounted ||
+          _isProfileDetailRouteOpen ||
           _bottomNavIndex != _startTabIndex ||
           _activeProfileWarmupTarget != null) {
         return;
@@ -680,6 +708,7 @@ class _HomeScreenState extends State<HomeScreen>
                       isDark: isDark,
                       scrollBottomPadding:
                           bottomNavHeight + bottomInset + profileBottomExtra,
+                      warmupPaused: _isProfileDetailRouteOpen,
                       onOpenDetailPage: _openProfileDetailPage,
                     ),
                   ),

@@ -14,14 +14,17 @@ import '../profile_details/profile_detail_prewarm.dart';
 
 const double _profileIconBaseSize = 21;
 const double _profileChevronBaseSize = 28;
-const Duration _profileDetailBatchWarmupDelay = Duration(milliseconds: 300);
-const Duration _profileDetailBatchUnmountDelay = Duration(milliseconds: 16);
+const Duration _profileDetailWarmupDelay = Duration(milliseconds: 300);
+const Duration _profileDetailWarmupUnmountDelay = Duration(milliseconds: 16);
+const Duration _profileDetailWarmupGap = Duration(milliseconds: 650);
+const Duration _profileDetailScrollQuietPeriod = Duration(milliseconds: 320);
 
 class ProfileTabContent extends StatefulWidget {
   final Color textColor;
   final double headerTopInset;
   final bool isDark;
   final double scrollBottomPadding;
+  final bool warmupPaused;
   final ValueChanged<WidgetBuilder> onOpenDetailPage;
 
   const ProfileTabContent({
@@ -30,6 +33,7 @@ class ProfileTabContent extends StatefulWidget {
     required this.headerTopInset,
     required this.isDark,
     required this.scrollBottomPadding,
+    required this.warmupPaused,
     required this.onOpenDetailPage,
   });
 
@@ -40,8 +44,9 @@ class ProfileTabContent extends StatefulWidget {
 class _ProfileTabContentState extends State<ProfileTabContent> {
   bool _scheduledWarmup = false;
   Timer? _profileDetailWarmupTimer;
-  List<ProfileDetailPrewarmTarget> _activePrewarmTargets =
-      const <ProfileDetailPrewarmTarget>[];
+  ProfileDetailPrewarmTarget? _activePrewarmTarget;
+  DateTime? _lastScrollActivityAt;
+  bool _hasQueuedProfileWarmupIconPrecache = false;
 
   @override
   void didChangeDependencies() {
@@ -51,6 +56,9 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
     }
 
     _scheduledWarmup = true;
+    if (widget.warmupPaused) {
+      return;
+    }
     if (pendingProfileDetailWarmupTargets().isEmpty) {
       return;
     }
@@ -58,11 +66,26 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
       if (!mounted) {
         return;
       }
-      _profileDetailWarmupTimer = Timer(
-        _profileDetailBatchWarmupDelay,
-        _startProfileDetailBatchWarmup,
-      );
+      _scheduleNextProfileDetailWarmup(_profileDetailWarmupDelay);
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant ProfileTabContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.warmupPaused) {
+      _profileDetailWarmupTimer?.cancel();
+      _profileDetailWarmupTimer = null;
+      _activePrewarmTarget = null;
+      return;
+    }
+
+    if (oldWidget.warmupPaused &&
+        _activePrewarmTarget == null &&
+        _profileDetailWarmupTimer == null &&
+        nextPendingProfileDetailWarmupTarget() != null) {
+      _scheduleNextProfileDetailWarmup(_profileDetailWarmupDelay);
+    }
   }
 
   @override
@@ -71,33 +94,67 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
     super.dispose();
   }
 
-  void _startProfileDetailBatchWarmup() {
+  void _scheduleNextProfileDetailWarmup(Duration delay) {
+    _profileDetailWarmupTimer?.cancel();
+    _profileDetailWarmupTimer = Timer(delay, _startNextProfileDetailWarmup);
+  }
+
+  void _startNextProfileDetailWarmup() {
     _profileDetailWarmupTimer = null;
-    if (!mounted || _activePrewarmTargets.isNotEmpty) {
+    if (!mounted || widget.warmupPaused || _activePrewarmTarget != null) {
       return;
     }
 
-    final List<ProfileDetailPrewarmTarget> pendingTargets =
-        pendingProfileDetailWarmupTargets();
-    if (pendingTargets.isEmpty) {
+    final ProfileDetailPrewarmTarget? pendingTarget =
+        nextPendingProfileDetailWarmupTarget();
+    if (pendingTarget == null) {
       return;
     }
 
-    unawaited(precacheProfileDetailWarmupIcons(context));
+    final DateTime? lastScrollActivityAt = _lastScrollActivityAt;
+    if (lastScrollActivityAt != null) {
+      final Duration timeSinceLastScroll = DateTime.now().difference(
+        lastScrollActivityAt,
+      );
+      if (timeSinceLastScroll < _profileDetailScrollQuietPeriod) {
+        _scheduleNextProfileDetailWarmup(
+          _profileDetailScrollQuietPeriod - timeSinceLastScroll,
+        );
+        return;
+      }
+    }
+
+    if (!_hasQueuedProfileWarmupIconPrecache) {
+      _hasQueuedProfileWarmupIconPrecache = true;
+      unawaited(precacheProfileDetailWarmupIcons(context));
+    }
+
     setState(() {
-      _activePrewarmTargets = pendingTargets;
+      _activePrewarmTarget = pendingTarget;
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future<void>.delayed(_profileDetailBatchUnmountDelay, () {
+      Future<void>.delayed(_profileDetailWarmupUnmountDelay, () {
         if (!mounted) {
           return;
         }
         setState(() {
-          _activePrewarmTargets = const <ProfileDetailPrewarmTarget>[];
+          _activePrewarmTarget = null;
         });
+        if (nextPendingProfileDetailWarmupTarget() != null) {
+          _scheduleNextProfileDetailWarmup(_profileDetailWarmupGap);
+        }
       });
     });
+  }
+
+  bool _handleProfileScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollStartNotification ||
+        notification is ScrollUpdateNotification ||
+        notification is OverscrollNotification) {
+      _lastScrollActivityAt = DateTime.now();
+    }
+    return false;
   }
 
   @override
@@ -183,138 +240,144 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
               ),
               SizedBox(height: s(28)),
               Expanded(
-                child: StretchingOverscrollIndicator(
-                  axisDirection: AxisDirection.down,
-                  child: SingleChildScrollView(
-                    primary: false,
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    padding: EdgeInsets.only(
-                      top: 0,
-                      bottom: widget.scrollBottomPadding,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ProfileSectionCard(
-                          s: s,
-                          backgroundColor: sectionSurfaceColor,
-                          children: [
-                            _ProfileRow(
-                              iconPath: 'assets/icons/circle.grid.3x3.fill.svg',
-                              label: 'Allgemein',
-                              showIndicator: true,
-                              foregroundColor: primaryContentColor,
-                              isDark: widget.isDark,
-                              showDivider: true,
-                              onTap: () {
-                                widget.onOpenDetailPage(
-                                  (_) => GeneralPage(
-                                    isDarkOverride: widget.isDark,
-                                  ),
-                                );
-                              },
-                            ),
-                            _ProfileRow(
-                              iconPath: 'assets/icons/bell.fill.svg',
-                              label: 'Benachrichtigungen',
-                              showIndicator: false,
-                              foregroundColor: primaryContentColor,
-                              isDark: widget.isDark,
-                              showDivider: true,
-                              onTap: () {
-                                widget.onOpenDetailPage(
-                                  (_) => NotificationsPage(
-                                    isDarkOverride: widget.isDark,
-                                  ),
-                                );
-                              },
-                            ),
-                            _ProfileRow(
-                              iconPath: 'assets/icons/creditcard.fill.svg',
-                              label: 'Zahlungen & Auszahlungen',
-                              showIndicator: true,
-                              foregroundColor: primaryContentColor,
-                              isDark: widget.isDark,
-                              showDivider: true,
-                              onTap: () {
-                                widget.onOpenDetailPage(
-                                  (_) => PaymentsPage(
-                                    isDarkOverride: widget.isDark,
-                                  ),
-                                );
-                              },
-                            ),
-                            _ProfileRow(
-                              iconPath: 'assets/icons/checkmark.seal.fill.svg',
-                              label: 'Verifizierung',
-                              showIndicator: true,
-                              foregroundColor: primaryContentColor,
-                              isDark: widget.isDark,
-                              showDivider: false,
-                              onTap: () {
-                                widget.onOpenDetailPage(
-                                  (_) => VerificationPage(
-                                    isDarkOverride: widget.isDark,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: s(14)),
-                        _ProfileSectionCard(
-                          s: s,
-                          backgroundColor: sectionSurfaceColor,
-                          children: [
-                            _ProfileRow(
-                              iconPath: 'assets/icons/scroll.fill.svg',
-                              label: 'Rechtliches',
-                              showIndicator: false,
-                              foregroundColor: primaryContentColor,
-                              isDark: widget.isDark,
-                              showDivider: true,
-                              onTap: () {
-                                widget.onOpenDetailPage(
-                                  (_) =>
-                                      LegalPage(isDarkOverride: widget.isDark),
-                                );
-                              },
-                            ),
-                            _ProfileRow(
-                              iconPath: 'assets/icons/gift.fill.svg',
-                              label: 'Affiliate',
-                              showIndicator: false,
-                              foregroundColor: primaryContentColor,
-                              isDark: widget.isDark,
-                              showDivider: true,
-                              onTap: () {
-                                widget.onOpenDetailPage(
-                                  (_) => AffiliatePage(
-                                    isDarkOverride: widget.isDark,
-                                  ),
-                                );
-                              },
-                            ),
-                            _ProfileRow(
-                              iconPath: 'assets/icons/headset.svg',
-                              label: 'Feedback',
-                              showIndicator: false,
-                              foregroundColor: primaryContentColor,
-                              isDark: widget.isDark,
-                              showDivider: false,
-                              onTap: () {
-                                widget.onOpenDetailPage(
-                                  (_) => FeedbackPage(
-                                    isDarkOverride: widget.isDark,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _handleProfileScrollNotification,
+                  child: StretchingOverscrollIndicator(
+                    axisDirection: AxisDirection.down,
+                    child: SingleChildScrollView(
+                      primary: false,
+                      physics: const AlwaysScrollableScrollPhysics(
+                        parent: BouncingScrollPhysics(),
+                      ),
+                      padding: EdgeInsets.only(
+                        top: 0,
+                        bottom: widget.scrollBottomPadding,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _ProfileSectionCard(
+                            s: s,
+                            backgroundColor: sectionSurfaceColor,
+                            children: [
+                              _ProfileRow(
+                                iconPath:
+                                    'assets/icons/circle.grid.3x3.fill.svg',
+                                label: 'Allgemein',
+                                showIndicator: true,
+                                foregroundColor: primaryContentColor,
+                                isDark: widget.isDark,
+                                showDivider: true,
+                                onTap: () {
+                                  widget.onOpenDetailPage(
+                                    (_) => GeneralPage(
+                                      isDarkOverride: widget.isDark,
+                                    ),
+                                  );
+                                },
+                              ),
+                              _ProfileRow(
+                                iconPath: 'assets/icons/bell.fill.svg',
+                                label: 'Benachrichtigungen',
+                                showIndicator: false,
+                                foregroundColor: primaryContentColor,
+                                isDark: widget.isDark,
+                                showDivider: true,
+                                onTap: () {
+                                  widget.onOpenDetailPage(
+                                    (_) => NotificationsPage(
+                                      isDarkOverride: widget.isDark,
+                                    ),
+                                  );
+                                },
+                              ),
+                              _ProfileRow(
+                                iconPath: 'assets/icons/creditcard.fill.svg',
+                                label: 'Zahlungen & Auszahlungen',
+                                showIndicator: true,
+                                foregroundColor: primaryContentColor,
+                                isDark: widget.isDark,
+                                showDivider: true,
+                                onTap: () {
+                                  widget.onOpenDetailPage(
+                                    (_) => PaymentsPage(
+                                      isDarkOverride: widget.isDark,
+                                    ),
+                                  );
+                                },
+                              ),
+                              _ProfileRow(
+                                iconPath:
+                                    'assets/icons/checkmark.seal.fill.svg',
+                                label: 'Verifizierung',
+                                showIndicator: true,
+                                foregroundColor: primaryContentColor,
+                                isDark: widget.isDark,
+                                showDivider: false,
+                                onTap: () {
+                                  widget.onOpenDetailPage(
+                                    (_) => VerificationPage(
+                                      isDarkOverride: widget.isDark,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: s(14)),
+                          _ProfileSectionCard(
+                            s: s,
+                            backgroundColor: sectionSurfaceColor,
+                            children: [
+                              _ProfileRow(
+                                iconPath: 'assets/icons/scroll.fill.svg',
+                                label: 'Rechtliches',
+                                showIndicator: false,
+                                foregroundColor: primaryContentColor,
+                                isDark: widget.isDark,
+                                showDivider: true,
+                                onTap: () {
+                                  widget.onOpenDetailPage(
+                                    (_) => LegalPage(
+                                      isDarkOverride: widget.isDark,
+                                    ),
+                                  );
+                                },
+                              ),
+                              _ProfileRow(
+                                iconPath: 'assets/icons/gift.fill.svg',
+                                label: 'Affiliate',
+                                showIndicator: false,
+                                foregroundColor: primaryContentColor,
+                                isDark: widget.isDark,
+                                showDivider: true,
+                                onTap: () {
+                                  widget.onOpenDetailPage(
+                                    (_) => AffiliatePage(
+                                      isDarkOverride: widget.isDark,
+                                    ),
+                                  );
+                                },
+                              ),
+                              _ProfileRow(
+                                iconPath: 'assets/icons/headset.svg',
+                                label: 'Feedback',
+                                showIndicator: false,
+                                foregroundColor: primaryContentColor,
+                                isDark: widget.isDark,
+                                showDivider: false,
+                                onTap: () {
+                                  widget.onOpenDetailPage(
+                                    (_) => FeedbackPage(
+                                      isDarkOverride: widget.isDark,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -322,15 +385,15 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
             ],
           ),
         ),
-        if (_activePrewarmTargets.isNotEmpty)
+        if (_activePrewarmTarget != null)
           Positioned.fill(
             child: IgnorePointer(
               child: TickerMode(
                 enabled: false,
                 child: Offstage(
                   offstage: true,
-                  child: ProfileDetailPrewarmBatchHost(
-                    targets: _activePrewarmTargets,
+                  child: ProfileDetailPrewarmHost(
+                    target: _activePrewarmTarget!,
                     isDark: widget.isDark,
                   ),
                 ),
