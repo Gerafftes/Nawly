@@ -1,0 +1,115 @@
+{
+  "sections": [
+    {
+      "id": "running",
+      "title": "Laufend",
+      "availableStates": [
+        "agreementPending",
+        "confirmed",
+        "inProgress",
+        "completionReported"
+      ],
+      "cards": [
+        {
+          "id": "running-dog-walking",
+          "title": "Gassi gehen",
+          "chip": "jobAccepted",
+          "metaText": "Heute, 14:00 · 15€",
+          "status": "agreementPending",
+          "iconPath": "assets/icons/briefcase.fill.svg"
+        },
+        {
+          "id": "running-tutoring-booked",
+          "title": "Nachhilfe",
+          "chip": "serviceBooked",
+          "metaText": "Heute, 15:00 – 17:00 · 40€",
+          "status": "confirmed",
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+        },
+        {
+          "id": "running-garden-service-with-you",
+          "title": "Gartenarbeit",
+          "chip": "serviceBookedWithYou",
+          "metaText": "Morgen, 10:00 · 25€",
+          "status": "inProgress",
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+        }
+      ]
+    },
+    {
+      "id": "created",
+      "title": "Von dir erstellt",
+      "availableStates": [
+        "helperNeeded",
+        "inProgress",
+        "completionConfirmation"
+      ],
+      "cards": [
+        {
+          "id": "created-moving-help",
+          "title": "Umzugshilfe",
+          "chip": "jobCreated",
+          "metaText": "Morgen, 09:00 · 60€",
+          "status": "helperNeeded",
+          "iconPath": "assets/icons/briefcase.fill.svg",
+          "showsVisibilityBadge": true
+        },
+        {
+          "id": "created-math-service",
+          "title": "Mathe Nachhilfe",
+          "chip": "serviceOffered",
+          "metaText": "Wöchentlich · 22€/h",
+          "status": "inProgress",
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg",
+          "showsVisibilityBadge": true
+        }
+      ]
+    },
+    {
+      "id": "completedForOthers",
+      "title": "Für andere erledigt",
+      "availableStates": ["completed"],
+      "cards": [
+        {
+          "id": "completed-others-carry-groceries",
+          "title": "Einkäufe tragen",
+          "chip": "jobCompletedByYou",
+          "metaText": "Gestern, 18:00 · 20€",
+          "status": "completed",
+          "iconPath": "assets/icons/briefcase.fill.svg"
+        },
+        {
+          "id": "completed-others-dog-sitting",
+          "title": "Hundesitting",
+          "chip": "serviceBookedWithYou",
+          "metaText": "Mo, 16:00 · 35€",
+          "status": "completed",
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+        }
+      ]
+    },
+    {
+      "id": "completedForYou",
+      "title": "Für dich erledigt",
+      "availableStates": ["completed"],
+      "cards": [
+        {
+          "id": "completed-you-shelf",
+          "title": "Regal aufbauen",
+          "chip": "jobCreated",
+          "metaText": "Dienstag, 13:00 · 45€",
+          "status": "completed",
+          "iconPath": "assets/icons/briefcase.fill.svg"
+        },
+        {
+          "id": "completed-you-window-cleaning",
+          "title": "Fenster putzen",
+          "chip": "serviceBooked",
+          "metaText": "Mittwoch, 11:00 · 30€",
+          "status": "completed",
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+        }
+      ]
+    }
+  ]
+}

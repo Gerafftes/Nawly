@@ -161,6 +161,22 @@ class SFSymbolHelper {
       name: 'hourglass',
       fallbackIcon: Icons.hourglass_empty_rounded,
     ),
+    'arrow.left.arrow.right': _SFSymbolIconDefinition(
+      name: 'arrow.left.arrow.right',
+      fallbackIcon: Icons.compare_arrows_rounded,
+    ),
+    'clock': _SFSymbolIconDefinition(
+      name: 'clock',
+      fallbackIcon: Icons.schedule_rounded,
+    ),
+    'checkmark': _SFSymbolIconDefinition(
+      name: 'checkmark',
+      fallbackIcon: Icons.check_rounded,
+    ),
+    'antenna.radiowaves.left.and.right': _SFSymbolIconDefinition(
+      name: 'antenna.radiowaves.left.and.right',
+      fallbackIcon: Icons.settings_input_antenna_rounded,
+    ),
   };
 
   static const Set<String> _rawSvgIcons = {
@@ -318,6 +334,14 @@ class SFSymbolHelper {
         return Icons.alarm_rounded;
       case 'hourglass':
         return Icons.hourglass_empty_rounded;
+      case 'arrow.left.arrow.right':
+        return Icons.compare_arrows_rounded;
+      case 'clock':
+        return Icons.schedule_rounded;
+      case 'checkmark':
+        return Icons.check_rounded;
+      case 'antenna.radiowaves.left.and.right':
+        return Icons.settings_input_antenna_rounded;
       case 'wrench.and.screwdriver':
       case 'wrench.and.screwdriver.fill':
         return CupertinoIcons.wrench;

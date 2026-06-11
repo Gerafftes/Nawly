@@ -30,6 +30,7 @@ flutter:
 
   assets:
     - assets/icons/
+    - assets/data/
 
 flutter_native_splash:
   android: true
