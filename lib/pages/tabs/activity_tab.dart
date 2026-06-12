@@ -593,11 +593,18 @@ class _SwipeRevealCard extends StatefulWidget {
 }
 
 class _SwipeRevealCardState extends State<_SwipeRevealCard> {
-  static const Duration _snapDuration = Duration(milliseconds: 180);
+  static const Duration _snapDuration = Duration(milliseconds: 280);
+  static const Curve _snapCurve = Curves.easeOutCubic;
 
   double _dragExtent = 0;
   bool _isDragging = false;
   bool _didTriggerFullSwipeHaptic = false;
+  bool _didTriggerSwipeAction = false;
+
+  void _resetSwipeFeedback() {
+    _didTriggerFullSwipeHaptic = false;
+    _didTriggerSwipeAction = false;
+  }
 
   void _triggerFullSwipeHaptic() {
     if (_didTriggerFullSwipeHaptic) {
@@ -619,7 +626,7 @@ class _SwipeRevealCardState extends State<_SwipeRevealCard> {
       _dragExtent = nextDragExtent;
 
       if (_dragExtent == 0) {
-        _didTriggerFullSwipeHaptic = false;
+        _resetSwipeFeedback();
       }
     });
 
@@ -628,22 +635,45 @@ class _SwipeRevealCardState extends State<_SwipeRevealCard> {
     }
   }
 
+  void _triggerSwipeAction() {
+    if (_didTriggerSwipeAction) {
+      return;
+    }
+
+    _didTriggerSwipeAction = true;
+    _triggerFullSwipeHaptic();
+
+    Future<void>.delayed(const Duration(milliseconds: 90), () {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _dragExtent = 0;
+        _resetSwipeFeedback();
+      });
+
+      widget.onTap();
+    });
+  }
+
   void _finishDrag(double revealWidth, double velocity) {
-    final bool shouldOpen =
-        velocity < -350 ||
-        (velocity.abs() <= 350 && _dragExtent > revealWidth * 0.35);
+    final bool isIntentionalFling =
+        velocity < -800 && _dragExtent > revealWidth * 0.35;
+    final bool shouldTriggerAction =
+        isIntentionalFling || _dragExtent > revealWidth * 0.72;
 
     setState(() {
       _isDragging = false;
-      _dragExtent = shouldOpen ? revealWidth : 0;
+      _dragExtent = shouldTriggerAction ? revealWidth : 0;
 
-      if (!shouldOpen) {
-        _didTriggerFullSwipeHaptic = false;
+      if (!shouldTriggerAction) {
+        _resetSwipeFeedback();
       }
     });
 
-    if (shouldOpen) {
-      _triggerFullSwipeHaptic();
+    if (shouldTriggerAction) {
+      _triggerSwipeAction();
     }
   }
 
@@ -653,7 +683,19 @@ class _SwipeRevealCardState extends State<_SwipeRevealCard> {
     final double actionGap = ui.s(8);
     final double actionWidth = ui.s(118);
     final double revealWidth = actionGap + actionWidth;
-    final double actionHeight = math.max(ui.s(64), widget.height - ui.s(16));
+    final double maxActionHeight = math.max(ui.s(64), widget.height - ui.s(16));
+    final double actionBubbleWidth = (_dragExtent - actionGap)
+        .clamp(0.0, actionWidth)
+        .toDouble();
+    final double actionProgress = actionBubbleWidth / actionWidth;
+    final double easedActionProgress = Curves.easeOutCubic.transform(
+      actionProgress,
+    );
+    final double actionBubbleHeight =
+        ui.s(34) + ((maxActionHeight - ui.s(34)) * easedActionProgress);
+    final double actionTextOpacity = ((actionProgress - 0.72) / 0.28)
+        .clamp(0.0, 1.0)
+        .toDouble();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -681,47 +723,64 @@ class _SwipeRevealCardState extends State<_SwipeRevealCard> {
             },
             child: ClipRect(
               child: Stack(
-                clipBehavior: Clip.none,
+                clipBehavior: Clip.hardEdge,
                 children: [
                   Positioned(
                     top: 0,
-                    left: 0,
-                    width: cardWidth + revealWidth,
+                    right: 0,
+                    width: revealWidth,
                     height: widget.height,
-                    child: AnimatedContainer(
-                      duration: _isDragging ? Duration.zero : _snapDuration,
-                      curve: Curves.easeOutCubic,
-                      transform: Matrix4.translationValues(-_dragExtent, 0, 0),
-                      child: Row(
-                        children: [
-                          SizedBox(width: cardWidth, child: widget.child),
-                          SizedBox(width: actionGap),
-                          SizedBox(
-                            width: actionWidth,
-                            height: widget.height,
-                            child: Center(
-                              child: Container(
-                                width: actionWidth,
-                                height: actionHeight,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1A1A1A),
-                                  borderRadius: BorderRadius.circular(ui.s(30)),
-                                ),
-                                child: Text(
-                                  'Bearbeiten',
-                                  style: TextStyle(
-                                    color: const Color(0xFFF2F2F2),
-                                    fontSize: ui.s(16),
-                                    fontWeight: FontWeight.w600,
-                                    height: 1,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: AnimatedContainer(
+                        duration: _isDragging ? Duration.zero : _snapDuration,
+                        curve: _snapCurve,
+                        width: actionBubbleWidth,
+                        height: actionBubbleHeight,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(ui.s(30)),
+                        ),
+                        child: actionTextOpacity == 0
+                            ? const SizedBox.shrink()
+                            : ClipRect(
+                                child: Opacity(
+                                  opacity: actionTextOpacity,
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: ui.s(10),
+                                      ),
+                                      child: Text(
+                                        'Bearbeiten',
+                                        maxLines: 1,
+                                        softWrap: false,
+                                        style: TextStyle(
+                                          color: const Color(0xFFF2F2F2),
+                                          fontSize: ui.s(16),
+                                          fontWeight: FontWeight.w600,
+                                          height: 1,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ),
-                        ],
                       ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    width: cardWidth,
+                    height: widget.height,
+                    child: AnimatedContainer(
+                      duration: _isDragging ? Duration.zero : _snapDuration,
+                      curve: _snapCurve,
+                      transform: Matrix4.translationValues(-_dragExtent, 0, 0),
+                      child: widget.child,
                     ),
                   ),
                 ],

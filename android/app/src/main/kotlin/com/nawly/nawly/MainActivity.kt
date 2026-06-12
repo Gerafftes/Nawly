@@ -1,4 +1,4 @@
-package com.minijobnow.minijobnow
+package com.nawly.nawly
 
 import android.content.Intent
 import android.net.Uri
@@ -13,7 +13,7 @@ class MainActivity : FlutterActivity() {
 
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "minijobnow/app_settings",
+            "nawly/app_settings",
         ).setMethodCallHandler { call, result ->
             if (call.method != "open") {
                 result.notImplemented()

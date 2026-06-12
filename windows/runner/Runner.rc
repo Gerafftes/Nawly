@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.minijobnow" "\0"
-            VALUE "FileDescription", "MiniJobNow" "\0"
+            VALUE "CompanyName", "com.nawly" "\0"
+            VALUE "FileDescription", "Nawly" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "MiniJobNow" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 com.minijobnow. All rights reserved." "\0"
-            VALUE "OriginalFilename", "minijobnow.exe" "\0"
-            VALUE "ProductName", "MiniJobNow" "\0"
+            VALUE "InternalName", "Nawly" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2025 com.nawly. All rights reserved." "\0"
+            VALUE "OriginalFilename", "nawly.exe" "\0"
+            VALUE "ProductName", "Nawly" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

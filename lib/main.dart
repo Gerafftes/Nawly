@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MiniJobNow',
+      title: 'Nawly',
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
@@ -990,7 +990,7 @@ class _HomeScreenState extends State<HomeScreen>
                     : !showBrandTitle
                     ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
                     : Text(
-                        'MiniJobNow',
+                        'Nawly',
                         key: const ValueKey<String>('appbar-title'),
                         maxLines: 1,
                         textAlign: TextAlign.center,

@@ -19,12 +19,12 @@ import UserNotifications
   func register(with registry: FlutterPluginRegistry) {
     GeneratedPluginRegistrant.register(with: registry)
 
-    guard let registrar = registry.registrar(forPlugin: "minijobnow/app_settings") else {
+    guard let registrar = registry.registrar(forPlugin: "nawly/app_settings") else {
       return
     }
 
     let channel = FlutterMethodChannel(
-      name: "minijobnow/app_settings",
+      name: "nawly/app_settings",
       binaryMessenger: registrar.messenger()
     )
 

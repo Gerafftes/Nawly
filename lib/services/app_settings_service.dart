@@ -2,9 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class AppSettingsService {
-  static const MethodChannel _channel = MethodChannel(
-    'minijobnow/app_settings',
-  );
+  static const MethodChannel _channel = MethodChannel('nawly/app_settings');
 
   static Future<void> openAppSettings() async {
     try {
