@@ -83,6 +83,7 @@ class _HomeScreenState extends State<HomeScreen>
   static const double _profileDetailOpenSwipeDistanceFraction = 0.24;
   static const double _profileDetailOpenSwipeMinFlingVelocity = 520;
   static const double _profileDetailBackgroundParallaxFraction = 0.35;
+  static const double _topBarScrolledUnderOffset = 2;
 
   int selectedIndex = 0;
   int _bottomNavIndex = 0;
@@ -92,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _showShakeOverlay = false;
   bool _showProfileInfoBox = true;
   bool _isProfileDetailRouteOpen = false;
+  bool _isTopBarScrolledUnder = false;
   bool _showProfileDetailOpenSwipeStack = false;
   bool _openProfileDetailAfterSwipeAnimation = false;
   double _profileDetailOpenDragDistance = 0;
@@ -392,6 +394,54 @@ class _HomeScreenState extends State<HomeScreen>
     _profileDetailBackgroundParallaxProgress = 0;
   }
 
+  bool _showsHomeTopBarChromeForIndex(int index) {
+    final bool showBellButton =
+        index != _activityTabIndex &&
+        index != _profileTabIndex &&
+        index != _createTabIndex;
+    final bool showCreateTitle = index == _createTabIndex;
+    final bool showActivityTitle = index == _activityTabIndex;
+    final bool showBrandTitle =
+        !showActivityTitle && index != _profileTabIndex && !showCreateTitle;
+    return showBellButton ||
+        showBrandTitle ||
+        showCreateTitle ||
+        showActivityTitle;
+  }
+
+  void _setTopBarScrolledUnder(bool value) {
+    if (_isTopBarScrolledUnder == value) {
+      return;
+    }
+
+    setState(() {
+      _isTopBarScrolledUnder = value;
+    });
+  }
+
+  bool _handleHomeScrollNotification(ScrollNotification notification) {
+    if (notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical ||
+        !_showsHomeTopBarChromeForIndex(_bottomNavIndex)) {
+      return false;
+    }
+
+    _setTopBarScrolledUnder(
+      notification.metrics.extentBefore > _topBarScrolledUnderOffset,
+    );
+    return false;
+  }
+
+  Color _resolveTopBarBackgroundColor(Color baseColor, bool isDark) {
+    final double lightnessDelta = isDark ? 0.045 : 0.055;
+    final HSLColor hslColor = HSLColor.fromColor(baseColor);
+    return hslColor
+        .withLightness(
+          (hslColor.lightness + lightnessDelta).clamp(0.0, 1.0).toDouble(),
+        )
+        .toColor();
+  }
+
   Widget _buildProfileDetailSwipePreview({
     required WidgetBuilder pageBuilder,
     required MediaQueryData mediaQuery,
@@ -524,6 +574,13 @@ class _HomeScreenState extends State<HomeScreen>
     final Color buttonTextColor = isDark
         ? const Color(0xFFF2F2F2)
         : const Color(0xFF0D0D0D);
+    final Color topBarScrolledBackgroundColor = _resolveTopBarBackgroundColor(
+      bgColor,
+      isDark,
+    );
+    final Color topBarBackgroundColor = _isTopBarScrolledUnder
+        ? topBarScrolledBackgroundColor
+        : bgColor;
     final SystemUiOverlayStyle overlayStyle = isDark
         ? SystemUiOverlayStyle.light
         : SystemUiOverlayStyle.dark;
@@ -806,18 +863,6 @@ class _HomeScreenState extends State<HomeScreen>
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.transparent,
         systemOverlayStyle: overlayStyle,
-        flexibleSpace: IgnorePointer(
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: showAppBarChrome ? 1 : 0),
-            duration: showAppBarChrome
-                ? _tabFadeInDuration
-                : _tabFadeOutDuration,
-            curve: Curves.easeInOut,
-            builder: (context, opacity, child) {
-              return ColoredBox(color: bgColor.withValues(alpha: opacity));
-            },
-          ),
-        ),
         automaticallyImplyLeading: false,
         titleSpacing: 0,
         leadingWidth: showCreateTitle || showActivityTitle ? 0 : s(56),
@@ -860,7 +905,7 @@ class _HomeScreenState extends State<HomeScreen>
                                 width: s(8),
                                 height: s(8),
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFFFF2121),
+                                  color: Color(0xFF007AFF),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -878,6 +923,7 @@ class _HomeScreenState extends State<HomeScreen>
                               }
                               _bottomNavIndex = _notificationsTabIndex;
                             }
+                            _isTopBarScrolledUnder = false;
                           });
                           _syncDelayedProfileWarmup();
                         },
@@ -886,143 +932,148 @@ class _HomeScreenState extends State<HomeScreen>
         title: const SizedBox.shrink(),
         centerTitle: false,
       ),
-      body: Stack(
-        children: [
-          AnimatedSwitcher(
-            duration: _tabFadeInDuration,
-            reverseDuration: _tabFadeOutDuration,
-            switchInCurve: Curves.easeIn,
-            switchOutCurve: Curves.easeOut,
-            layoutBuilder: (currentChild, previousChildren) {
-              return Stack(
-                alignment: Alignment.topCenter,
-                children: [...previousChildren, ?currentChild],
-              );
-            },
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeInOut,
-              ),
-              child: child,
-            ),
-            child: KeyedSubtree(
-              key: ValueKey<int>(_bottomNavIndex),
-              child: SizedBox.expand(child: buildTab(_bottomNavIndex)),
-            ),
-          ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: IgnorePointer(
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(end: showAppBarChrome ? 1 : 0),
-                duration: showAppBarChrome
-                    ? _tabFadeInDuration
-                    : _tabFadeOutDuration,
-                curve: Curves.easeInOut,
-                builder: (context, opacity, child) {
-                  if (opacity <= 0) {
-                    return const SizedBox.shrink();
-                  }
-
-                  return ColoredBox(
-                    color: bgColor.withValues(alpha: opacity),
-                    child: SizedBox(height: topBarInset),
-                  );
-                },
-              ),
-            ),
-          ),
-          Positioned(
-            top: viewPadding.top,
-            left: 0,
-            right: 0,
-            height: kToolbarHeight,
-            child: IgnorePointer(
-              child: AnimatedSwitcher(
-                duration: _tabFadeInDuration,
-                reverseDuration: _tabFadeOutDuration,
-                switchInCurve: Curves.easeIn,
-                switchOutCurve: Curves.easeOut,
-                layoutBuilder: (currentChild, previousChildren) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      for (final child in previousChildren)
-                        Center(child: child),
-                      if (currentChild != null) Center(child: currentChild),
-                    ],
-                  );
-                },
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: animation,
-                    curve: Curves.easeInOut,
-                  ),
-                  child: child,
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleHomeScrollNotification,
+        child: Stack(
+          children: [
+            AnimatedSwitcher(
+              duration: _tabFadeInDuration,
+              reverseDuration: _tabFadeOutDuration,
+              switchInCurve: Curves.easeIn,
+              switchOutCurve: Curves.easeOut,
+              layoutBuilder: (currentChild, previousChildren) {
+                return Stack(
+                  alignment: Alignment.topCenter,
+                  children: [...previousChildren, ?currentChild],
+                );
+              },
+              transitionBuilder: (child, animation) => FadeTransition(
+                opacity: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeInOut,
                 ),
-                child: showCreateTitle
-                    ? Text(
-                        'Was möchtest du erstellen?',
-                        key: const ValueKey<String>('appbar-create-title'),
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: s(22),
-                        ),
-                      )
-                    : showActivityTitle
-                    ? Text(
-                        'Deine Aufträge',
-                        key: const ValueKey<String>('appbar-activity-title'),
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: s(22),
-                        ),
-                      )
-                    : !showBrandTitle
-                    ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
-                    : Text(
-                        'Nawly',
-                        key: const ValueKey<String>('appbar-title'),
-                        maxLines: 1,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: textColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: s(28),
-                        ),
-                      ),
+                child: child,
+              ),
+              child: KeyedSubtree(
+                key: ValueKey<int>(_bottomNavIndex),
+                child: SizedBox.expand(child: buildTab(_bottomNavIndex)),
               ),
             ),
-          ),
-          ShakeOverlay(
-            isVisible: _showShakeOverlay,
-            onDismiss: _dismissShakeOverlay,
-          ),
-          if (_activeProfileWarmupTarget != null)
-            Positioned.fill(
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
               child: IgnorePointer(
-                child: TickerMode(
-                  enabled: false,
-                  child: Offstage(
-                    offstage: true,
-                    child: ProfileDetailPrewarmHost(
-                      target: _activeProfileWarmupTarget!,
-                      isDark: isDark,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(end: showAppBarChrome ? 1 : 0),
+                  duration: showAppBarChrome
+                      ? _tabFadeInDuration
+                      : _tabFadeOutDuration,
+                  curve: Curves.easeInOut,
+                  builder: (context, opacity, child) {
+                    if (opacity <= 0) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOut,
+                      height: topBarInset,
+                      color: topBarBackgroundColor.withValues(alpha: opacity),
+                    );
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: viewPadding.top,
+              left: 0,
+              right: 0,
+              height: kToolbarHeight,
+              child: IgnorePointer(
+                child: AnimatedSwitcher(
+                  duration: _tabFadeInDuration,
+                  reverseDuration: _tabFadeOutDuration,
+                  switchInCurve: Curves.easeIn,
+                  switchOutCurve: Curves.easeOut,
+                  layoutBuilder: (currentChild, previousChildren) {
+                    return Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        for (final child in previousChildren)
+                          Center(child: child),
+                        if (currentChild != null) Center(child: currentChild),
+                      ],
+                    );
+                  },
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeInOut,
+                    ),
+                    child: child,
+                  ),
+                  child: showCreateTitle
+                      ? Text(
+                          'Was möchtest du erstellen?',
+                          key: const ValueKey<String>('appbar-create-title'),
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: s(22),
+                          ),
+                        )
+                      : showActivityTitle
+                      ? Text(
+                          'Deine Aufträge',
+                          key: const ValueKey<String>('appbar-activity-title'),
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.w600,
+                            fontSize: s(22),
+                          ),
+                        )
+                      : !showBrandTitle
+                      ? const SizedBox(key: ValueKey<String>('appbar-no-title'))
+                      : Text(
+                          'Nawly',
+                          key: const ValueKey<String>('appbar-title'),
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: s(28),
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            ShakeOverlay(
+              isVisible: _showShakeOverlay,
+              onDismiss: _dismissShakeOverlay,
+            ),
+            if (_activeProfileWarmupTarget != null)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: TickerMode(
+                    enabled: false,
+                    child: Offstage(
+                      offstage: true,
+                      child: ProfileDetailPrewarmHost(
+                        target: _activeProfileWarmupTarget!,
+                        isDark: isDark,
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
       bottomNavigationBar: SizedBox(
         height: s(85),
@@ -1060,6 +1111,7 @@ class _HomeScreenState extends State<HomeScreen>
               } else {
                 _bottomNavIndex = index;
                 _mainTabIndex = index;
+                _isTopBarScrolledUnder = false;
               }
             });
             _syncDelayedProfileWarmup();

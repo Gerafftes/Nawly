@@ -1,7 +1,80 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
 import '../../../services/ui_scale.dart';
 import '../../../widgets/job_card.dart';
+
+const List<String> _jobsFilterDistanceOptions = <String>[
+  '1 km',
+  '3 km',
+  '5 km',
+  '10 km',
+  '15 km',
+];
+
+const List<String> _jobsFilterCategoryOptions = <String>[
+  'Alle',
+  'Haushalt & Reinigung',
+  'Gartenarbeit & Pflanzenpflege',
+  'Umzug & Möbel tragen',
+  'Reparaturen & Heimwerken',
+  'Kinderbetreuung',
+  'Seniorenhilfe',
+  'Einkäufe & Besorgungen',
+  'Nachhilfe & Technikhilfe',
+  'Haustierbetreuung',
+  'Sonstiges / Allgemeine Hilfe',
+];
+
+const AppleLiquidSheetContent _jobsFilterSheetContent = AppleLiquidSheetContent(
+  title: 'Filter',
+  doneSemanticLabel: 'Speichern',
+  sections: <AppleLiquidSheetSection>[
+    AppleLiquidSheetSection(
+      title: 'Distanz',
+      rows: <AppleLiquidSheetRow>[
+        AppleLiquidSheetRow.picker(
+          title: 'Umkreis',
+          options: _jobsFilterDistanceOptions,
+          selectedOption: '5 km',
+          systemImage: 'location',
+        ),
+      ],
+    ),
+    AppleLiquidSheetSection(
+      title: 'Kategorie',
+      rows: <AppleLiquidSheetRow>[
+        AppleLiquidSheetRow.picker(
+          title: 'Kategorie',
+          options: _jobsFilterCategoryOptions,
+          selectedOption: 'Alle',
+          systemImage: 'square.grid.2x2',
+        ),
+      ],
+    ),
+    AppleLiquidSheetSection(
+      title: 'Sortierung',
+      rows: <AppleLiquidSheetRow>[
+        AppleLiquidSheetRow.picker(
+          title: 'Sortieren von',
+          options: <String>['Neu zu Alt', 'Alt zu Neu'],
+          selectedOption: 'Neu zu Alt',
+          systemImage: 'arrow.up.arrow.down',
+        ),
+      ],
+    ),
+    AppleLiquidSheetSection(
+      title: 'Ansicht',
+      rows: <AppleLiquidSheetRow>[
+        AppleLiquidSheetRow.value(
+          title: 'Darstellung',
+          value: 'Kartenansicht',
+          systemImage: 'map',
+        ),
+      ],
+    ),
+  ],
+);
 
 class JobsFindContent extends StatelessWidget {
   final Color cardColor;
@@ -33,7 +106,7 @@ class JobsFindContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
-    final double infoCardHeight = s(104);
+    final double infoCardHeight = s(106);
     final double sectionHeaderHeight = s(44);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,7 +169,18 @@ class JobsFindContent extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () {
+                onPressed: () async {
+                  final bool didShowNativeSheet =
+                      await AppleLiquidSheet.showSheet(
+                        content: _jobsFilterSheetContent,
+                      );
+                  if (didShowNativeSheet) {
+                    return;
+                  }
+                  if (!context.mounted) {
+                    return;
+                  }
+
                   final bool isDark = themeMode == 'auto'
                       ? MediaQuery.of(context).platformBrightness ==
                             Brightness.dark
