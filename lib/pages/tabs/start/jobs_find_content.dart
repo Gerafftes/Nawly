@@ -4,14 +4,6 @@ import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
 import '../../../services/ui_scale.dart';
 import '../../../widgets/job_card.dart';
 
-const List<String> _jobsFilterDistanceOptions = <String>[
-  '1 km',
-  '3 km',
-  '5 km',
-  '10 km',
-  '15 km',
-];
-
 const List<String> _jobsFilterCategoryOptions = <String>[
   'Alle',
   'Haushalt & Reinigung',
@@ -33,10 +25,13 @@ const AppleLiquidSheetContent _jobsFilterSheetContent = AppleLiquidSheetContent(
     AppleLiquidSheetSection(
       title: 'Distanz',
       rows: <AppleLiquidSheetRow>[
-        AppleLiquidSheetRow.picker(
-          title: 'Umkreis',
-          options: _jobsFilterDistanceOptions,
-          selectedOption: '5 km',
+        AppleLiquidSheetRow.slider(
+          title: 'Umkreis (km)',
+          value: 5,
+          min: 1,
+          max: 15,
+          step: 1,
+          tintColor: Color(0xFF007AFF),
           systemImage: 'location',
         ),
       ],
@@ -55,11 +50,17 @@ const AppleLiquidSheetContent _jobsFilterSheetContent = AppleLiquidSheetContent(
     AppleLiquidSheetSection(
       title: 'Sortierung',
       rows: <AppleLiquidSheetRow>[
-        AppleLiquidSheetRow.picker(
+        AppleLiquidSheetRow.segmented(
           title: 'Sortieren von',
-          options: <String>['Neu zu Alt', 'Alt zu Neu'],
+          firstOption: 'Neu zu Alt',
+          secondOption: 'Alt zu Neu',
           selectedOption: 'Neu zu Alt',
           systemImage: 'arrow.up.arrow.down',
+          style: AppleLiquidSheetSegmentedStyle(
+            selectedBackgroundColor: Color(0xFF1A1A1A),
+            unselectedBackgroundColor: Color(0xFF0D0D0D),
+            borderWidth: 0,
+          ),
         ),
       ],
     ),
