@@ -1,6 +1,8 @@
 # Nawly
 
-Nawly ist eine Flutter-App fuer Mini-Jobs und lokale Services.
+Mit Nawly findest du schnelle Hilfe in deiner Nähe oder verdienst Geld mit kleinen Jobs und Services. Erstelle Aufgaben, buche Services oder hilf anderen direkt vor Ort.
+
+---
 
 ## Hauptseiten
 
