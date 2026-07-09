@@ -384,11 +384,17 @@ class _GeneralPageState extends State<GeneralPage>
     const Color addButtonTextColor = Color(0xFF4DAAFC);
     final Color destructiveButtonColor = HSLColor.fromAHSL(
       0.30,
-      9,
-      0.65,
-      0.54,
+      359,
+      1.0,
+      0.63,
     ).toColor();
-    const Color destructiveButtonTextColor = Color(0xFFD6543D);
+    final Color destructiveButtonStrokeColor = HSLColor.fromAHSL(
+      1.0,
+      359,
+      1.0,
+      0.63,
+    ).toColor();
+    final Color destructiveButtonTextColor = destructiveButtonStrokeColor;
     final double generalActionButtonWidth = s(121);
     final double generalActionButtonHeight = s(44);
     final _GeneralOverlayConfig displayNameConfig = _displayNameOverlayConfig();
@@ -583,6 +589,8 @@ class _GeneralPageState extends State<GeneralPage>
                                               destructiveButtonColor,
                                           actionTextColor:
                                               destructiveButtonTextColor,
+                                          actionBorderColor:
+                                              destructiveButtonStrokeColor,
                                           actionLabel: 'Abmelden',
                                           actionButtonWidth:
                                               generalActionButtonWidth,
@@ -607,7 +615,7 @@ class _GeneralPageState extends State<GeneralPage>
                                           actionTextColor:
                                               destructiveButtonTextColor,
                                           actionBorderColor:
-                                              destructiveButtonTextColor,
+                                              destructiveButtonStrokeColor,
                                           actionLabel: 'Löschen',
                                           actionButtonWidth:
                                               generalActionButtonWidth,

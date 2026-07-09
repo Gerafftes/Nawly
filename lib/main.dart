@@ -103,6 +103,8 @@ class _HomeScreenState extends State<HomeScreen>
   Timer? _profileWarmupTimer;
   ProfileDetailPrewarmTarget? _activeProfileWarmupTarget;
   bool _hasQueuedProfileWarmupIconPrecache = false;
+  final AppleLiquidSheetController _jobsFilterSheetController =
+      AppleLiquidSheetController();
   late final AnimationController _profileDetailOpenSwipeController;
   Animation<double>? _profileDetailOpenSwipeAnimation;
 
@@ -148,6 +150,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void dispose() {
     _profileWarmupTimer?.cancel();
+    _jobsFilterSheetController.dispose();
     _profileDetailOpenSwipeController.dispose();
     _shakeDetector = null;
     super.dispose();
@@ -551,9 +554,14 @@ class _HomeScreenState extends State<HomeScreen>
     final Color cardColor = isDark
         ? const Color(0xFF0D0D0D)
         : const Color(0xFFF2F2F2);
-    final Color cardColorActive = isDark
-        ? const Color(0xFF1A1A1A)
-        : Colors.white;
+    final Color startActionButtonColor = isDark
+        ? const Color(0xFF111111)
+        : const Color(0xFF0D0D0D);
+    final Color startActionButtonActiveColor = isDark
+        ? const Color(0xFF1C1C1E)
+        : const Color(0xFF1A1A1A);
+    const Color startActionButtonTextColor = Color(0xFFF2F2F2);
+    const Color startActionButtonIconColor = Color(0xFFEBEBEB);
     final Color borderColor = isDark
         ? const Color.fromRGBO(255, 255, 255, 0.18)
         : const Color(0xFFCCCCCC);
@@ -614,6 +622,7 @@ class _HomeScreenState extends State<HomeScreen>
           filterIconColor: bellIconColor,
           themeMode: _themeMode,
           buttonTextColor: buttonTextColor,
+          sheetController: _jobsFilterSheetController,
         );
         break;
       case 1:
@@ -662,10 +671,29 @@ class _HomeScreenState extends State<HomeScreen>
       );
     }
 
+    Widget buildStartActionButton({
+      required int index,
+      required String iconPath,
+      required String label,
+    }) {
+      final bool isSelected = selectedIndex == index;
+      return HomeActionButton(
+        iconPath: iconPath,
+        label: label,
+        color: isSelected
+            ? startActionButtonActiveColor
+            : startActionButtonColor,
+        onTap: () => setState(() => selectedIndex = index),
+        isSelected: isSelected,
+        textColor: startActionButtonTextColor,
+        iconColor: startActionButtonIconColor,
+      );
+    }
+
     Widget buildTab(int index) {
       switch (index) {
         case _startTabIndex:
-          return withPullToRefresh(
+          final Widget startContent = withPullToRefresh(
             Padding(
               padding: EdgeInsets.only(
                 top: topBarInset,
@@ -679,29 +707,17 @@ class _HomeScreenState extends State<HomeScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      HomeActionButton(
+                      buildStartActionButton(
+                        index: 0,
                         iconPath: 'assets/icons/briefcase.fill.svg',
                         label: 'Jobs finden',
-                        color: selectedIndex == 0 ? cardColorActive : cardColor,
-                        onTap: () => setState(() => selectedIndex = 0),
-                        isSelected: selectedIndex == 0,
-                        textColor: textColor,
-                        iconColor: isDark
-                            ? const Color(0xFFEBEBEB)
-                            : const Color(0xFF1A1A1A),
                       ),
                       SizedBox(width: s(12)),
-                      HomeActionButton(
+                      buildStartActionButton(
+                        index: 1,
                         iconPath:
                             'assets/icons/list.bullet.rectangle.portrait.fill.svg',
                         label: 'Services',
-                        color: selectedIndex == 1 ? cardColorActive : cardColor,
-                        onTap: () => setState(() => selectedIndex = 1),
-                        isSelected: selectedIndex == 1,
-                        textColor: textColor,
-                        iconColor: isDark
-                            ? const Color(0xFFEBEBEB)
-                            : const Color(0xFF1A1A1A),
                       ),
                     ],
                   ),
@@ -734,6 +750,10 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             padding: EdgeInsets.zero,
+          );
+          return AppleLiquidSheetBackgroundInteractionGuard(
+            controller: _jobsFilterSheetController,
+            child: startContent,
           );
         case _activityTabIndex:
           return withPullToRefresh(

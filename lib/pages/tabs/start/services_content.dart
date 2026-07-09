@@ -30,7 +30,7 @@ class ServicesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
-    final double infoCardHeight = ui.s(104);
+    final double infoCardHeight = ui.s(106);
     final double sectionHeaderHeight = ui.s(44);
 
     return Column(

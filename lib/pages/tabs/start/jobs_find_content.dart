@@ -18,9 +18,22 @@ const List<String> _jobsFilterCategoryOptions = <String>[
   'Sonstiges / Allgemeine Hilfe',
 ];
 
+const String _jobsFilterConfirmLabel = 'Bestätigen';
+
 const AppleLiquidSheetContent _jobsFilterSheetContent = AppleLiquidSheetContent(
   title: 'Filter',
-  doneSemanticLabel: 'Speichern',
+  doneSemanticLabel: _jobsFilterConfirmLabel,
+  leadingAction: AppleLiquidSheetToolbarAction(
+    systemImage: 'xmark',
+    semanticLabel: 'Schließen',
+    foregroundColor: Color(0xFFF2F2F2),
+  ),
+  trailingAction: AppleLiquidSheetToolbarAction(
+    systemImage: 'checkmark',
+    semanticLabel: _jobsFilterConfirmLabel,
+    foregroundColor: Color(0xFFFFFFFF),
+    backgroundColor: Color(0xFF007AFF),
+  ),
   sections: <AppleLiquidSheetSection>[
     AppleLiquidSheetSection(
       title: 'Distanz',
@@ -32,6 +45,7 @@ const AppleLiquidSheetContent _jobsFilterSheetContent = AppleLiquidSheetContent(
           max: 15,
           step: 1,
           tintColor: Color(0xFF007AFF),
+          valuePlacement: AppleLiquidSheetSliderValuePlacement.besideTrack,
           systemImage: 'location',
         ),
       ],
@@ -88,6 +102,7 @@ class JobsFindContent extends StatelessWidget {
   final Color filterIconColor;
   final String themeMode;
   final Color buttonTextColor;
+  final AppleLiquidSheetController sheetController;
 
   const JobsFindContent({
     super.key,
@@ -101,6 +116,7 @@ class JobsFindContent extends StatelessWidget {
     required this.filterIconColor,
     required this.themeMode,
     required this.buttonTextColor,
+    required this.sheetController,
   });
 
   @override
@@ -171,9 +187,10 @@ class JobsFindContent extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () async {
-                  final bool didShowNativeSheet =
-                      await AppleLiquidSheet.showSheet(
+                  final bool didShowNativeSheet = await sheetController
+                      .showSheet(
                         content: _jobsFilterSheetContent,
+                        scrollContext: context,
                       );
                   if (didShowNativeSheet) {
                     return;
