@@ -1,8 +1,12 @@
 # Nawly
-
-Mit Nawly findest du schnelle Hilfe in deiner Nähe oder verdienst Geld mit kleinen Jobs und Services. Erstelle Aufgaben, buche Services oder hilf anderen direkt vor Ort.
+[![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)](#)
+[![Production Ready](https://img.shields.io/badge/production%20ready-no-red)](#)
+[![Platform](https://img.shields.io/badge/platform-iOS-lightgrey)](https://flutter.dev)
 
 ---
+
+Mit Nawly findest du schnelle Hilfe in deiner Nähe oder verdienst Geld mit kleinen Jobs und Services. Erstelle Aufgaben, buche Services oder hilf anderen direkt vor Ort.-
+--
 
 ## Hauptseiten
 
