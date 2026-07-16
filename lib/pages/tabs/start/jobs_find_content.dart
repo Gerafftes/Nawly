@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
+import '../../../data/jobs_find_repository.dart';
+import '../../../models/job_models.dart';
 import '../../../services/ui_scale.dart';
 import '../../../widgets/job_card.dart';
 
@@ -20,78 +22,7 @@ const List<String> _jobsFilterCategoryOptions = <String>[
 
 const String _jobsFilterConfirmLabel = 'Bestätigen';
 
-const AppleLiquidSheetContent _jobsFilterSheetContent = AppleLiquidSheetContent(
-  title: 'Filter',
-  doneSemanticLabel: _jobsFilterConfirmLabel,
-  leadingAction: AppleLiquidSheetToolbarAction(
-    systemImage: 'xmark',
-    semanticLabel: 'Schließen',
-    foregroundColor: Color(0xFFF2F2F2),
-  ),
-  trailingAction: AppleLiquidSheetToolbarAction(
-    systemImage: 'checkmark',
-    semanticLabel: _jobsFilterConfirmLabel,
-    foregroundColor: Color(0xFFFFFFFF),
-    backgroundColor: Color(0xFF007AFF),
-  ),
-  sections: <AppleLiquidSheetSection>[
-    AppleLiquidSheetSection(
-      title: 'Distanz',
-      rows: <AppleLiquidSheetRow>[
-        AppleLiquidSheetRow.slider(
-          title: 'Umkreis (km)',
-          value: 5,
-          min: 1,
-          max: 15,
-          step: 1,
-          tintColor: Color(0xFF007AFF),
-          valuePlacement: AppleLiquidSheetSliderValuePlacement.besideTrack,
-          systemImage: 'location',
-        ),
-      ],
-    ),
-    AppleLiquidSheetSection(
-      title: 'Kategorie',
-      rows: <AppleLiquidSheetRow>[
-        AppleLiquidSheetRow.picker(
-          title: 'Kategorie',
-          options: _jobsFilterCategoryOptions,
-          selectedOption: 'Alle',
-          systemImage: 'square.grid.2x2',
-        ),
-      ],
-    ),
-    AppleLiquidSheetSection(
-      title: 'Sortierung',
-      rows: <AppleLiquidSheetRow>[
-        AppleLiquidSheetRow.segmented(
-          title: 'Sortieren von',
-          firstOption: 'Neu zu Alt',
-          secondOption: 'Alt zu Neu',
-          selectedOption: 'Neu zu Alt',
-          systemImage: 'arrow.up.arrow.down',
-          style: AppleLiquidSheetSegmentedStyle(
-            selectedBackgroundColor: Color(0xFF1A1A1A),
-            unselectedBackgroundColor: Color(0xFF0D0D0D),
-            borderWidth: 0,
-          ),
-        ),
-      ],
-    ),
-    AppleLiquidSheetSection(
-      title: 'Ansicht',
-      rows: <AppleLiquidSheetRow>[
-        AppleLiquidSheetRow.value(
-          title: 'Darstellung',
-          value: 'Kartenansicht',
-          systemImage: 'map',
-        ),
-      ],
-    ),
-  ],
-);
-
-class JobsFindContent extends StatelessWidget {
+class JobsFindContent extends StatefulWidget {
   final Color cardColor;
   final Color secondaryText;
   final Color borderColor;
@@ -103,6 +34,7 @@ class JobsFindContent extends StatelessWidget {
   final String themeMode;
   final Color buttonTextColor;
   final AppleLiquidSheetController sheetController;
+  final JobsFindRepository jobsRepository;
 
   const JobsFindContent({
     super.key,
@@ -117,26 +49,172 @@ class JobsFindContent extends StatelessWidget {
     required this.themeMode,
     required this.buttonTextColor,
     required this.sheetController,
+    this.jobsRepository = const JobsFindDemoRepository(),
   });
+
+  @override
+  State<JobsFindContent> createState() => _JobsFindContentState();
+}
+
+class _JobsFindContentState extends State<JobsFindContent> {
+  late final Future<List<JobFindData>> _jobsFuture;
+  bool _isMapViewActive = false;
+  Set<String> _selectedCategories = <String>{'Alle'};
+
+  @override
+  void initState() {
+    super.initState();
+    _jobsFuture = widget.jobsRepository.loadJobs();
+  }
+
+  String get _viewButtonTitle =>
+      _isMapViewActive ? 'Listenansicht' : 'Kartenansicht';
+
+  void _toggleJobsView() {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isMapViewActive = !_isMapViewActive;
+    });
+  }
+
+  String get _categorySelectionLabel {
+    if (_selectedCategories.contains('Alle') || _selectedCategories.isEmpty) {
+      return 'Alle';
+    }
+    if (_selectedCategories.length == 1) {
+      return _selectedCategories.first;
+    }
+    return '${_selectedCategories.length} ausgewählt';
+  }
+
+  void _updateSelectedCategories(Iterable<String> categories) {
+    final Set<String> selection = categories
+        .where(_jobsFilterCategoryOptions.contains)
+        .toSet();
+    setState(() {
+      _selectedCategories = selection.isEmpty ? <String>{'Alle'} : selection;
+    });
+  }
+
+  AppleLiquidSheetContent _buildJobsFilterSheetContent() {
+    return AppleLiquidSheetContent(
+      title: 'Filter',
+      doneSemanticLabel: _jobsFilterConfirmLabel,
+      showsSectionBackgrounds: false,
+      sectionSpacing: 2,
+      leadingAction: const AppleLiquidSheetToolbarAction(
+        systemImage: 'xmark',
+        semanticLabel: 'Schließen',
+        foregroundColor: Color(0xFFE6E6E6),
+      ),
+      trailingAction: const AppleLiquidSheetToolbarAction(
+        systemImage: 'checkmark',
+        semanticLabel: _jobsFilterConfirmLabel,
+        foregroundColor: Color(0xFFFFFFFF),
+        backgroundColor: Color(0xFF007AFF),
+      ),
+      sections: <AppleLiquidSheetSection>[
+        AppleLiquidSheetSection(
+          rows: <AppleLiquidSheetRow>[
+            const AppleLiquidSheetRow.slider(
+              title: 'Distanz',
+              value: 5,
+              min: 1,
+              max: 15,
+              step: 1,
+              valueSuffix: 'km',
+              tintColor: Color(0xFF007AFF),
+              valuePlacement: AppleLiquidSheetSliderValuePlacement.besideTrack,
+              rowHorizontalInset: 8,
+            ),
+          ],
+        ),
+        AppleLiquidSheetSection(
+          title: 'Kategorie',
+          titleColor: const Color(0xFFE6E6E6),
+          titleHorizontalInset: 8,
+          titleSpacing: 0,
+          showsBackground: true,
+          backgroundColor: const Color(0xFF0D0D0D),
+          borderColor: const Color(0xFF0D0D0D),
+          cornerRadius: 15,
+          rows: <AppleLiquidSheetRow>[
+            AppleLiquidSheetRow.multiPicker(
+              title: 'Kategorie',
+              options: _jobsFilterCategoryOptions,
+              selectedOptions: _selectedCategories.toList(growable: false),
+              chevronColor: const Color(0xFFF2F2F2),
+              selectionLabelPlacement:
+                  AppleLiquidSheetMultiPickerLabelPlacement.primary,
+              onSelectionChanged: _updateSelectedCategories,
+            ),
+          ],
+        ),
+        AppleLiquidSheetSection(
+          rows: <AppleLiquidSheetRow>[
+            const AppleLiquidSheetRow.segmented(
+              title: 'Sortiert von',
+              firstOption: 'Neu zu Alt',
+              secondOption: 'Alt zu Neu',
+              selectedOption: 'Neu zu Alt',
+              style: AppleLiquidSheetSegmentedStyle(
+                selectedBackgroundColor: Color(0xFF0D0D0D),
+                unselectedBackgroundColor: Color(0xFF0D0D0D),
+                selectedTextColor: Color(0xFF1EACFF),
+                unselectedTextColor: Color(0xFFE6E6E6),
+                titleColor: Color(0xFFE6E6E6),
+                contentSpacing: 10,
+                verticalPadding: 2,
+                rowHorizontalInset: 8,
+                borderWidth: 0,
+                selectedShadowRadius: 0,
+                selectedShadowOffsetY: 0,
+              ),
+            ),
+          ],
+        ),
+        AppleLiquidSheetSection(
+          rows: <AppleLiquidSheetRow>[
+            AppleLiquidSheetRow.button(
+              title: _viewButtonTitle,
+              tintColor: const Color(0xFF007AFF),
+              dismissesSheet: true,
+              style: const AppleLiquidSheetButtonStyle(
+                foregroundColor: Color(0xFFE6E6E6),
+                buttonHeight: 60,
+                rowHorizontalInset: 8,
+                rowTopInset: 14,
+                rowBottomInset: 4,
+              ),
+              onPressed: _toggleJobsView,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
-    final double infoCardHeight = s(106);
+    final double infoCardMinHeight = s(106);
     final double sectionHeaderHeight = s(44);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Info-Card
-        SizedBox(
-          height: infoCardHeight,
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: infoCardMinHeight),
           child: Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(s(15), s(15), s(15), s(15)),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(s(15)),
-              border: Border.all(color: borderColor, width: s(2)),
+              border: Border.all(color: widget.borderColor, width: s(2)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,7 +226,7 @@ class JobsFindContent extends StatelessWidget {
                     applyHeightToLastDescent: false,
                   ),
                   style: TextStyle(
-                    color: textColor,
+                    color: widget.textColor,
                     fontWeight: FontWeight.bold,
                     fontSize: s(20),
                     height: 1,
@@ -162,7 +240,7 @@ class JobsFindContent extends StatelessWidget {
                     applyHeightToLastDescent: false,
                   ),
                   style: TextStyle(
-                    color: secondaryText,
+                    color: widget.secondaryText,
                     fontSize: s(15),
                     height: 1.4,
                   ),
@@ -180,16 +258,16 @@ class JobsFindContent extends StatelessWidget {
               Text(
                 'In deiner Nähe',
                 style: TextStyle(
-                  color: textColor,
+                  color: widget.textColor,
                   fontWeight: FontWeight.bold,
                   fontSize: s(20),
                 ),
               ),
               IconButton(
                 onPressed: () async {
-                  final bool didShowNativeSheet = await sheetController
+                  final bool didShowNativeSheet = await widget.sheetController
                       .showSheet(
-                        content: _jobsFilterSheetContent,
+                        content: _buildJobsFilterSheetContent(),
                         scrollContext: context,
                       );
                   if (didShowNativeSheet) {
@@ -199,10 +277,10 @@ class JobsFindContent extends StatelessWidget {
                     return;
                   }
 
-                  final bool isDark = themeMode == 'auto'
+                  final bool isDark = widget.themeMode == 'auto'
                       ? MediaQuery.of(context).platformBrightness ==
                             Brightness.dark
-                      : themeMode == 'dark';
+                      : widget.themeMode == 'dark';
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
@@ -217,21 +295,9 @@ class JobsFindContent extends StatelessWidget {
                     ),
                     builder: (context) {
                       double distance = 5;
-                      String? selectedCategory;
-                      const String defaultCategoryLabel = 'Alle';
                       bool isCategoryMenuOpen = false;
-                      final List<String> categories = [
-                        'Haushalt & Reinigung',
-                        'Gartenarbeit & Pflanzenpflege',
-                        'Umzug & Möbel tragen',
-                        'Reparaturen & Heimwerken',
-                        'Kinderbetreuung',
-                        'Seniorenhilfe',
-                        'Einkäufe & Besorgungen',
-                        'Nachhilfe & Technikhilfe',
-                        'Haustierbetreuung',
-                        'Sonstiges / Allgemeine Hilfe',
-                      ];
+                      final List<String> categories =
+                          _jobsFilterCategoryOptions;
                       final GlobalKey filterSheetKey = GlobalKey();
                       final GlobalKey categoryDropdownKey = GlobalKey();
                       OverlayEntry? categoryDropdownOverlay;
@@ -461,8 +527,10 @@ class JobsFindContent extends StatelessWidget {
                                                             final category =
                                                                 categories[index];
                                                             final isSelected =
-                                                                category ==
-                                                                selectedCategory;
+                                                                _selectedCategories
+                                                                    .contains(
+                                                                      category,
+                                                                    );
                                                             final isLast =
                                                                 index ==
                                                                 categories
@@ -472,12 +540,45 @@ class JobsFindContent extends StatelessWidget {
                                                             return InkWell(
                                                               onTap: () {
                                                                 setModalState(() {
-                                                                  selectedCategory =
-                                                                      category;
-                                                                  isCategoryMenuOpen =
-                                                                      false;
+                                                                  final selection =
+                                                                      Set<
+                                                                        String
+                                                                      >.from(
+                                                                        _selectedCategories,
+                                                                      );
+                                                                  if (category ==
+                                                                      'Alle') {
+                                                                    selection
+                                                                      ..clear()
+                                                                      ..add(
+                                                                        'Alle',
+                                                                      );
+                                                                  } else {
+                                                                    selection
+                                                                        .remove(
+                                                                          'Alle',
+                                                                        );
+                                                                    if (!selection
+                                                                        .add(
+                                                                          category,
+                                                                        )) {
+                                                                      selection
+                                                                          .remove(
+                                                                            category,
+                                                                          );
+                                                                    }
+                                                                    if (selection
+                                                                        .isEmpty) {
+                                                                      selection
+                                                                          .add(
+                                                                            'Alle',
+                                                                          );
+                                                                    }
+                                                                  }
+                                                                  _updateSelectedCategories(
+                                                                    selection,
+                                                                  );
                                                                 });
-                                                                hideCategoryDropdownOverlay();
                                                               },
                                                               child: categoryItem(
                                                                 category,
@@ -823,8 +924,7 @@ class JobsFindContent extends StatelessWidget {
                                                         children: [
                                                           Expanded(
                                                             child: Text(
-                                                              selectedCategory ??
-                                                                  defaultCategoryLabel,
+                                                              _categorySelectionLabel,
                                                               style:
                                                                   fieldTextStyle,
                                                               overflow:
@@ -996,14 +1096,15 @@ class JobsFindContent extends StatelessWidget {
                                       height: s(60),
                                       child: Semantics(
                                         button: true,
-                                        label: 'Kartenansicht',
+                                        label: _viewButtonTitle,
                                         child: GestureDetector(
-                                          onTap: () {},
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            _toggleJobsView();
+                                            Navigator.of(context).pop();
+                                          },
                                           child: Container(
                                             decoration: BoxDecoration(
-                                              color: isDark
-                                                  ? const Color(0xFF1A1A1A)
-                                                  : const Color(0xFFF2F2F2),
                                               borderRadius:
                                                   BorderRadius.circular(s(15)),
                                               border: Border.all(
@@ -1012,15 +1113,23 @@ class JobsFindContent extends StatelessWidget {
                                               ),
                                             ),
                                             alignment: Alignment.center,
-                                            child: Text(
-                                              'Kartenansicht',
-                                              style: TextStyle(
-                                                color: isDark
-                                                    ? Colors.white
-                                                    : const Color(0xFF000000),
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: screenWidth * 0.04,
-                                              ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: <Widget>[
+                                                Text(
+                                                  _viewButtonTitle,
+                                                  style: TextStyle(
+                                                    color: isDark
+                                                        ? Colors.white
+                                                        : const Color(
+                                                            0xFF000000,
+                                                          ),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize:
+                                                        screenWidth * 0.04,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                         ),
@@ -1036,9 +1145,13 @@ class JobsFindContent extends StatelessWidget {
                     },
                   );
                 },
-                icon: Icon(Icons.tune, color: filterIconColor, size: s(28)),
+                icon: Icon(
+                  Icons.tune,
+                  color: widget.filterIconColor,
+                  size: s(28),
+                ),
                 style: IconButton.styleFrom(
-                  backgroundColor: cardColor,
+                  backgroundColor: widget.cardColor,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(s(8)),
                   ),
@@ -1051,45 +1164,48 @@ class JobsFindContent extends StatelessWidget {
             ],
           ),
         ),
-        SizedBox(height: s(12)),
-        JobCard(
-          title: 'Gassi gehen',
-          time: 'Heute, 14:00',
-          price: '10 €',
-          distance: '1,2km',
-          color: jobCardColor,
-          textColor: textColor,
-          buttonColor: jobButtonColor,
-          timeTextColor: timeTextColor,
-          buttonTextColor: buttonTextColor,
-          showVerified: true,
-        ),
-        SizedBox(height: s(12)),
-        JobCard(
-          title: 'Einkaufshilfe',
-          time: 'Heute, 15:00',
-          price: '12 €',
-          distance: '0,8km',
-          color: jobCardColor,
-          textColor: textColor,
-          buttonColor: jobButtonColor,
-          timeTextColor: timeTextColor,
-          buttonTextColor: buttonTextColor,
-          showVerified: true,
-        ),
-        SizedBox(height: s(12)),
-        JobCard(
-          title: 'Paket abholen',
-          time: 'Heute, 16:30',
-          price: '8 €',
-          distance: '2,1km',
-          color: jobCardColor,
-          textColor: textColor,
-          buttonColor: jobButtonColor,
-          timeTextColor: timeTextColor,
-          buttonTextColor: buttonTextColor,
-          showVerified: true,
-        ),
+        if (!_isMapViewActive) ...[
+          SizedBox(height: s(12)),
+          FutureBuilder<List<JobFindData>>(
+            future: _jobsFuture,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Text(
+                  'Jobs konnten nicht geladen werden.',
+                  style: TextStyle(
+                    color: widget.secondaryText,
+                    fontSize: s(15),
+                  ),
+                );
+              }
+
+              final List<JobFindData>? jobs = snapshot.data;
+              if (jobs == null) {
+                return SizedBox(height: s(12));
+              }
+
+              return Column(
+                children: [
+                  for (int index = 0; index < jobs.length; index++) ...[
+                    if (index > 0) SizedBox(height: s(12)),
+                    JobCard(
+                      title: jobs[index].title,
+                      time: jobs[index].time,
+                      price: jobs[index].price,
+                      distance: jobs[index].distance,
+                      color: widget.jobCardColor,
+                      textColor: widget.textColor,
+                      buttonColor: widget.jobButtonColor,
+                      timeTextColor: widget.timeTextColor,
+                      buttonTextColor: widget.buttonTextColor,
+                      showVerified: jobs[index].showVerified,
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ],
       ],
     );
   }

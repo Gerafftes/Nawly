@@ -36,3 +36,5 @@ Für die App bedeutet das: Nawly kann nicht nur spontane Hilfe vermitteln, sonde
 | Aktivitaet | Profil |
 | --- | --- |
 | <img src="docs/bilder/hauptseiten/activity.png" alt="Aktivitaet" width="260"> | <img src="docs/bilder/hauptseiten/profile.png" alt="Profil" width="260"> |
+
+[Weitere Bilder ansehen](docs/bilder/weitere/)

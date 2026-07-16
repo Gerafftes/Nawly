@@ -1,0 +1,72 @@
+{
+  "profile": {
+    "displayName": "Gerafftes",
+    "avatarInitial": "G",
+    "rating": 4.9,
+    "completedJobs": 5,
+    "skillInputHint": "Nachhilfe",
+    "skills": [
+      "Garten...",
+      "Umzugs...",
+      "WLAN ein..."
+    ]
+  },
+  "verification": {
+    "name": "unverified",
+    "address": "unverified",
+    "idCard": "unverified",
+    "email": "unverified",
+    "phone": "unverified",
+    "twoFactor": "unverified"
+  },
+  "payments": {
+    "paymentMethods": [
+      {
+        "id": "paypal",
+        "type": "paypal"
+      },
+      {
+        "id": "applePay",
+        "type": "applePay"
+      }
+    ],
+    "payoutAccounts": [
+      {
+        "id": "paypal",
+        "type": "paypal",
+        "title": "Johann Eugen Mün...",
+        "amount": "300,00 €",
+        "statusText": "Bereit zur Auszahlung",
+        "feeLabel": "Gebühr 0%",
+        "minLabel": "Mindestbetrag",
+        "nextLabel": "Nächste Auszahlung",
+        "minAmount": "25,00 €",
+        "brandLabel": "PayPal"
+      },
+      {
+        "id": "visa",
+        "type": "visa",
+        "title": "Visa •••• 4242",
+        "amount": "300,00 €",
+        "statusText": "Bereit zur Auszahlung",
+        "feeLabel": "Gebühr 1,5%",
+        "minLabel": "Mindestbetrag",
+        "nextLabel": "Nächste Auszahlung",
+        "minAmount": "25,00 €",
+        "brandLabel": "Visa"
+      },
+      {
+        "id": "giftCard",
+        "type": "giftCard",
+        "title": "Gutschein",
+        "amount": "300,00 €",
+        "statusText": "Bereit zur Auszahlung",
+        "feeLabel": "Gebühr 0%",
+        "minLabel": "Mindestbetrag",
+        "nextLabel": "",
+        "minAmount": "5,00 €",
+        "brandLabel": "Amazon.de\nGutschein"
+      }
+    ]
+  }
+}

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,72 @@ const Duration _notificationsInfoOverlayTransitionDuration = Duration(
   milliseconds: 180,
 );
 const Duration _notificationsSwitchMountDelay = Duration(milliseconds: 290);
+const String _notificationsInfoTitle = 'Wichtige Benachrichtigungen';
+const String _notificationsInfoDescription =
+    'Sicherheits- und Zahlungsinfos helfen dir, keine wichtigen Änderungen zu verpassen.';
+
+TextStyle _notificationsInfoTitleStyle(double Function(double) s) {
+  return TextStyle(
+    color: const Color(0xFFBCBCBC),
+    fontSize: s(15),
+    fontWeight: FontWeight.w600,
+  );
+}
+
+TextStyle _notificationsInfoDescriptionStyle(double Function(double) s) {
+  return TextStyle(
+    color: const Color(0xFF747474),
+    fontSize: s(11.5),
+    fontWeight: FontWeight.w600,
+  );
+}
+
+double _measureNotificationsInfoHeight(
+  BuildContext context,
+  double Function(double) s,
+  double maxWidth,
+) {
+  final TextDirection textDirection = Directionality.of(context);
+  final TextScaler textScaler = MediaQuery.textScalerOf(context);
+
+  double measureText(String text, TextStyle style, {double? width}) {
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: DefaultTextStyle.of(context).style.merge(style),
+      ),
+      textDirection: textDirection,
+      textScaler: textScaler,
+    )..layout(maxWidth: width ?? double.infinity);
+    return painter.height;
+  }
+
+  final double textWidth = math.max(0, maxWidth - s(8) - s(10) - s(12) - s(44));
+  final double badgeHeight =
+      measureText(
+        'Hinweis',
+        TextStyle(fontSize: s(12), height: 1, fontWeight: FontWeight.w400),
+      ) +
+      s(4);
+  final double contentHeight =
+      s(8) +
+      badgeHeight +
+      s(7) +
+      measureText(
+        _notificationsInfoTitle,
+        _notificationsInfoTitleStyle(s),
+        width: textWidth,
+      ) +
+      s(2) +
+      measureText(
+        _notificationsInfoDescription,
+        _notificationsInfoDescriptionStyle(s),
+        width: textWidth,
+      ) +
+      s(14);
+
+  return math.max(s(124), contentHeight);
+}
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({
@@ -150,8 +217,17 @@ class _NotificationsPageState extends State<NotificationsPage>
     final double infoBoxGap = s(19);
     final bool shouldBuildInfoBox = isInitialContentReady;
     final bool showInfoBox = shouldBuildInfoBox && _showNotificationsInfoBox;
+    final double infoBoxWidth = math.max(
+      0,
+      MediaQuery.sizeOf(context).width - (viewPadding.horizontal * 2) - s(32),
+    );
+    final double infoBoxHeight = _measureNotificationsInfoHeight(
+      context,
+      s,
+      infoBoxWidth,
+    );
     final double reservedBottomInset = showInfoBox
-        ? s(138) + viewPadding.bottom + infoBoxGap
+        ? infoBoxHeight + viewPadding.bottom + infoBoxGap
         : 0;
 
     return Scaffold(
@@ -224,6 +300,7 @@ class _NotificationsPageState extends State<NotificationsPage>
                         child: _NotificationsInfoOverlay(
                           s: s,
                           isDark: isDark,
+                          height: infoBoxHeight,
                           onDismiss: () {
                             setState(() {
                               _showNotificationsInfoBox = false;
@@ -366,11 +443,13 @@ class _NotificationsInfoOverlay extends StatelessWidget {
   const _NotificationsInfoOverlay({
     required this.s,
     required this.isDark,
+    required this.height,
     required this.onDismiss,
   });
 
   final double Function(double) s;
   final bool isDark;
+  final double height;
   final VoidCallback onDismiss;
 
   @override
@@ -380,99 +459,98 @@ class _NotificationsInfoOverlay extends StatelessWidget {
     final double infoBadgeRadius = (infoBoxRadius - infoContentInset)
         .clamp(0.0, infoBoxRadius)
         .toDouble();
-    const String infoTitleText = 'Wichtige Benachrichtigungen';
-    const String infoDescriptionText =
-        'Sicherheits- und Zahlungsinfos helfen dir, keine wichtigen Änderungen zu verpassen.';
-    final TextStyle infoTitleStyle = TextStyle(
-      color: const Color(0xFFBCBCBC),
-      fontSize: s(15),
-      fontWeight: FontWeight.w600,
-    );
-    final TextStyle infoDescriptionStyle = TextStyle(
-      color: const Color(0xFF747474),
-      fontSize: s(11.5),
-      fontWeight: FontWeight.w600,
+    final TextStyle infoTitleStyle = _notificationsInfoTitleStyle(s);
+    final TextStyle infoDescriptionStyle = _notificationsInfoDescriptionStyle(
+      s,
     );
 
-    return GlassPressable(
-      borderRadius: infoBoxRadius,
-      child: GlassSurface(
-        config: LiquidGlassStyle.infoBox(isDark: isDark, s: s),
-        isDark: isDark,
+    return SizedBox(
+      height: height,
+      child: GlassPressable(
         borderRadius: infoBoxRadius,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            infoContentInset,
-            infoContentInset,
-            s(10),
-            s(14),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: s(12)),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: s(8),
-                          vertical: s(2),
-                        ),
-                        decoration: BoxDecoration(
-                          color: HSLColor.fromAHSL(
-                            0.3,
-                            211,
-                            1.0,
-                            0.50,
-                          ).toColor(),
-                          borderRadius: BorderRadius.circular(infoBadgeRadius),
-                        ),
-                        child: Text(
-                          'Hinweis',
-                          style: TextStyle(
-                            color: const Color(0xFF4DAAFC),
-                            fontSize: s(12),
-                            fontWeight: FontWeight.w400,
-                            height: 1.0,
+        child: GlassSurface(
+          config: LiquidGlassStyle.infoBox(isDark: isDark, s: s),
+          isDark: isDark,
+          borderRadius: infoBoxRadius,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              infoContentInset,
+              infoContentInset,
+              s(10),
+              s(14),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: s(12)),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: s(8),
+                            vertical: s(2),
+                          ),
+                          decoration: BoxDecoration(
+                            color: HSLColor.fromAHSL(
+                              0.3,
+                              211,
+                              1.0,
+                              0.50,
+                            ).toColor(),
+                            borderRadius: BorderRadius.circular(
+                              infoBadgeRadius,
+                            ),
+                          ),
+                          child: Text(
+                            'Hinweis',
+                            style: TextStyle(
+                              color: const Color(0xFF4DAAFC),
+                              fontSize: s(12),
+                              fontWeight: FontWeight.w400,
+                              height: 1.0,
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(height: s(7)),
-                      Text(infoTitleText, style: infoTitleStyle),
-                      SizedBox(height: s(2)),
-                      Text(infoDescriptionText, style: infoDescriptionStyle),
-                    ],
+                        SizedBox(height: s(7)),
+                        Text(_notificationsInfoTitle, style: infoTitleStyle),
+                        SizedBox(height: s(2)),
+                        Text(
+                          _notificationsInfoDescription,
+                          style: infoDescriptionStyle,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Semantics(
-                button: true,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onDismiss,
-                  child: SizedBox(
-                    width: s(44),
-                    height: s(44),
-                    child: Align(
-                      alignment: Alignment.topRight,
-                      child: Padding(
-                        padding: EdgeInsets.only(top: s(2), right: s(2)),
-                        child: SFSymbolHelper.getIcon(
-                          iconPath: 'assets/icons/close.svg',
-                          width: s(12),
-                          height: s(12),
-                          color: const Color(0xFF747474),
+                Semantics(
+                  button: true,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onDismiss,
+                    child: SizedBox(
+                      width: s(44),
+                      height: s(44),
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: Padding(
+                          padding: EdgeInsets.only(top: s(2), right: s(2)),
+                          child: SFSymbolHelper.getIcon(
+                            iconPath: 'assets/icons/close.svg',
+                            width: s(12),
+                            height: s(12),
+                            color: const Color(0xFF747474),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

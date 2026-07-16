@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../models/user_profile_models.dart';
 import '../../services/sf_symbol_helper.dart';
 import '../../services/ui_scale.dart';
 import '../profile_details/verification_page.dart';
@@ -20,6 +21,7 @@ const Duration _profileDetailWarmupGap = Duration(milliseconds: 650);
 const Duration _profileDetailScrollQuietPeriod = Duration(milliseconds: 320);
 
 class ProfileTabContent extends StatefulWidget {
+  final UserProfileData userProfile;
   final Color textColor;
   final double headerTopInset;
   final bool isDark;
@@ -29,6 +31,7 @@ class ProfileTabContent extends StatefulWidget {
 
   const ProfileTabContent({
     super.key,
+    required this.userProfile,
     required this.textColor,
     required this.headerTopInset,
     required this.isDark,
@@ -188,13 +191,15 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                   _ProfileAvatarBadge(
                     width: avatarBoxSize,
                     isDark: widget.isDark,
-                    letter: 'G',
+                    letter: widget.userProfile.profile.avatarInitial,
                   ),
                   SizedBox(width: s(19)),
                   Expanded(
-                    child: SizedBox(
-                      height: s(65),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: avatarBoxSize),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Padding(
@@ -202,28 +207,42 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  'Gerafftes',
-                                  style: TextStyle(
-                                    color: widget.textColor,
-                                    fontSize: s(30),
-                                    fontWeight: FontWeight.w700,
-                                    height: 1.0,
+                                Flexible(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      widget.userProfile.profile.displayName,
+                                      maxLines: 1,
+                                      style: TextStyle(
+                                        color: widget.textColor,
+                                        fontSize: s(30),
+                                        fontWeight: FontWeight.w700,
+                                        height: 1.0,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 SizedBox(width: s(8)),
                                 Padding(
                                   padding: EdgeInsets.only(top: s(2)),
-                                  child: _ProfileRatingChip(s: s),
+                                  child: _ProfileRatingChip(
+                                    s: s,
+                                    rating: widget
+                                        .userProfile
+                                        .profile
+                                        .formattedRating,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          const Spacer(),
+                          SizedBox(height: s(8)),
                           Padding(
                             padding: EdgeInsets.only(bottom: s(4)),
                             child: Text(
-                              '5 Abgeschlossene Aufträge',
+                              '${widget.userProfile.profile.completedJobs} '
+                              'Abgeschlossene Aufträge',
                               style: TextStyle(
                                 color: const Color(0xFFB3B3B3),
                                 fontSize: s(17),
@@ -271,6 +290,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                                 onTap: () {
                                   widget.onOpenDetailPage(
                                     (_) => GeneralPage(
+                                      userProfile: widget.userProfile,
                                       isDarkOverride: widget.isDark,
                                     ),
                                   );
@@ -301,6 +321,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                                 onTap: () {
                                   widget.onOpenDetailPage(
                                     (_) => PaymentsPage(
+                                      userProfile: widget.userProfile,
                                       isDarkOverride: widget.isDark,
                                     ),
                                   );
@@ -317,6 +338,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                                 onTap: () {
                                   widget.onOpenDetailPage(
                                     (_) => VerificationPage(
+                                      userProfile: widget.userProfile,
                                       isDarkOverride: widget.isDark,
                                     ),
                                   );
@@ -395,6 +417,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                   child: ProfileDetailPrewarmHost(
                     target: _activePrewarmTarget!,
                     isDark: widget.isDark,
+                    userProfile: widget.userProfile,
                   ),
                 ),
               ),
@@ -452,35 +475,44 @@ class _ProfileRow extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: ui.s(34),
-                        height: ui.s(34),
-                        decoration: BoxDecoration(
-                          color: iconTileColor,
-                          borderRadius: BorderRadius.circular(ui.s(11)),
-                        ),
-                        child: Center(
-                          child: SFSymbolHelper.getIcon(
-                            iconPath: iconPath,
-                            width: iconSize,
-                            height: iconSize,
-                            color: foregroundColor,
+                  Expanded(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: ui.s(34),
+                          height: ui.s(34),
+                          decoration: BoxDecoration(
+                            color: iconTileColor,
+                            borderRadius: BorderRadius.circular(ui.s(11)),
+                          ),
+                          child: Center(
+                            child: SFSymbolHelper.getIcon(
+                              iconPath: iconPath,
+                              width: iconSize,
+                              height: iconSize,
+                              color: foregroundColor,
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(width: ui.s(16)),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          color: foregroundColor,
-                          fontSize: ui.s(18),
-                          fontWeight: FontWeight.w600,
+                        SizedBox(width: ui.s(16)),
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              label,
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: foregroundColor,
+                                fontSize: ui.s(18),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -586,9 +618,10 @@ class _ProfileAvatarBadge extends StatelessWidget {
 }
 
 class _ProfileRatingChip extends StatelessWidget {
-  const _ProfileRatingChip({required this.s});
+  const _ProfileRatingChip({required this.s, required this.rating});
 
   final double Function(double) s;
+  final String rating;
 
   @override
   Widget build(BuildContext context) {
@@ -607,7 +640,7 @@ class _ProfileRatingChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '4,9',
+            rating,
             style: TextStyle(
               color: const Color(0xFF007AFF),
               fontSize: s(11.5),

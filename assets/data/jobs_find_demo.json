@@ -1,0 +1,28 @@
+{
+  "jobs": [
+    {
+      "id": "find-dog-walking",
+      "title": "Gassi gehen",
+      "time": "Heute, 14:00",
+      "price": "10 €",
+      "distance": "1,2km",
+      "showVerified": true
+    },
+    {
+      "id": "find-grocery-help",
+      "title": "Einkaufshilfe",
+      "time": "Heute, 15:00",
+      "price": "12 €",
+      "distance": "0,8km",
+      "showVerified": true
+    },
+    {
+      "id": "find-package-pickup",
+      "title": "Paket abholen",
+      "time": "Heute, 16:30",
+      "price": "8 €",
+      "distance": "2,1km",
+      "showVerified": true
+    }
+  ]
+}

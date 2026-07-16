@@ -16,7 +16,7 @@ dependencies:
   shared_preferences: ^2.5.4
   sensors_plus: ^7.0.0
   flutter_native_splash: ^2.4.7
-  mjn_liquid_ui: ^0.2.13
+  mjn_liquid_ui: ^0.2.23
   intl: ^0.20.2
   dropdown_button2: ^2.3.9
 

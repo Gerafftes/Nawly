@@ -9,3 +9,4 @@ ios/Pods/
 .DS_Store
 .ralph/
 .ralphrc
+pubspec_overrides.yaml

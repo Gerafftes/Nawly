@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
@@ -56,151 +58,197 @@ class _CreateTabContentState extends State<CreateTabContent> {
       required String iconPath,
       required List<_CreateExampleChipData> examples,
     }) {
-      return SizedBox(
-        height: s(210),
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0D0D0D),
-                  borderRadius: BorderRadius.circular(s(24)),
-                ),
-              ),
-            ),
-            Positioned(
-              left: s(18),
-              top: s(11),
-              child: Container(
-                width: s(52),
-                height: s(52),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF141414),
-                  borderRadius: BorderRadius.circular(s(9)),
-                ),
-                child: Center(
-                  child: SFSymbolHelper.getIcon(
-                    iconPath: iconPath,
-                    width: s(30),
-                    height: s(30),
-                    color: const Color(0xFFEBEBEB),
+      final TextDirection textDirection = Directionality.of(context);
+      final TextScaler textScaler = MediaQuery.textScalerOf(context);
+      final TextStyle titleStyle = TextStyle(
+        color: const Color(0xFFF2F2F2),
+        fontSize: s(21),
+        fontWeight: FontWeight.bold,
+        height: 1,
+      );
+      final TextStyle descriptionStyle = TextStyle(
+        color: const Color(0xFFB3B3B3),
+        fontSize: s(13),
+        fontWeight: FontWeight.bold,
+        height: 1.2,
+      );
+      final TextStyle examplesLabelStyle = TextStyle(
+        color: const Color(0xFFB3B3B3),
+        fontSize: s(12),
+        fontWeight: FontWeight.w500,
+      );
+
+      double measureTextHeight(String text, TextStyle style, double maxWidth) {
+        final TextPainter painter = TextPainter(
+          text: TextSpan(
+            text: text,
+            style: DefaultTextStyle.of(context).style.merge(style),
+          ),
+          textDirection: textDirection,
+          textScaler: textScaler,
+        )..layout(maxWidth: maxWidth);
+        return painter.height;
+      }
+
+      return LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final double headerTextWidth = math.max(
+            0,
+            constraints.maxWidth - s(36) - s(67),
+          );
+          final double headerHeight =
+              measureTextHeight(title, titleStyle, headerTextWidth) +
+              s(10) +
+              measureTextHeight(description, descriptionStyle, headerTextWidth);
+          final double examplesHeight =
+              s(7) +
+              1 +
+              s(5) +
+              measureTextHeight(
+                'Beispiele',
+                examplesLabelStyle,
+                constraints.maxWidth,
+              ) +
+              s(8) +
+              s(22);
+          final double cardHeight = math.max(
+            s(210),
+            s(15) + headerHeight + examplesHeight + s(60),
+          );
+
+          return SizedBox(
+            height: cardHeight,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0D0D0D),
+                      borderRadius: BorderRadius.circular(s(24)),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              left: s(18),
-              right: s(18),
-              top: s(15),
-              bottom: s(60),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(left: s(67)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: TextStyle(
-                            color: const Color(0xFFF2F2F2),
-                            fontSize: s(21),
-                            fontWeight: FontWeight.bold,
-                            height: 1,
+                Positioned(
+                  left: s(18),
+                  top: s(11),
+                  child: Container(
+                    width: s(52),
+                    height: s(52),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF141414),
+                      borderRadius: BorderRadius.circular(s(9)),
+                    ),
+                    child: Center(
+                      child: SFSymbolHelper.getIcon(
+                        iconPath: iconPath,
+                        width: s(30),
+                        height: s(30),
+                        color: const Color(0xFFEBEBEB),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: s(18),
+                  right: s(18),
+                  top: s(15),
+                  bottom: s(60),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.only(left: s(67)),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: titleStyle),
+                            SizedBox(height: s(10)),
+                            Text(description, style: descriptionStyle),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: s(7)),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 1,
+                                color: const Color(0xFF1B1B1B),
+                              ),
+                              SizedBox(height: s(5)),
+                              Text('Beispiele', style: examplesLabelStyle),
+                              SizedBox(height: s(8)),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: _CreateExampleChipRow(
+                                  examples: examples,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        SizedBox(height: s(10)),
-                        Text(
-                          description,
-                          style: TextStyle(
-                            color: const Color(0xFFB3B3B3),
-                            fontSize: s(13),
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: SizedBox(
+                    height: s(60),
+                    child: Listener(
+                      onPointerDown: (_) => _setCreateButtonPressed(true),
+                      onPointerUp: (_) => _setCreateButtonPressed(false),
+                      onPointerCancel: (_) => _setCreateButtonPressed(false),
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF007AFF),
+                          foregroundColor: const Color(0xFFF2F2F2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(s(24)),
+                          ),
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size(double.infinity, s(60)),
+                          elevation: 0,
+                        ),
+                        onPressed: HapticFeedback.selectionClick,
+                        child: SizedBox.expand(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Text(
+                                buttonText,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: const Color(0xFFF2F2F2),
+                                  fontSize: s(17),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Positioned(
+                                right: s(30),
+                                child: Icon(
+                                  Icons.chevron_right,
+                                  color: const Color(0xFFF2F2F2),
+                                  size: s(24),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(bottom: s(7)),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(height: 1, color: const Color(0xFF1B1B1B)),
-                          SizedBox(height: s(5)),
-                          Text(
-                            'Beispiele',
-                            style: TextStyle(
-                              color: const Color(0xFFB3B3B3),
-                              fontSize: s(12),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(height: s(8)),
-                          _CreateExampleChipRow(examples: examples),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: SizedBox(
-                height: s(60),
-                child: Listener(
-                  onPointerDown: (_) => _setCreateButtonPressed(true),
-                  onPointerUp: (_) => _setCreateButtonPressed(false),
-                  onPointerCancel: (_) => _setCreateButtonPressed(false),
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF007AFF),
-                      foregroundColor: const Color(0xFFF2F2F2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(s(24)),
-                      ),
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size(double.infinity, s(60)),
-                      elevation: 0,
-                    ),
-                    onPressed: HapticFeedback.selectionClick,
-                    child: SizedBox.expand(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Text(
-                            buttonText,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: const Color(0xFFF2F2F2),
-                              fontSize: s(17),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Positioned(
-                            right: s(30),
-                            child: Icon(
-                              Icons.chevron_right,
-                              color: const Color(0xFFF2F2F2),
-                              size: s(24),
-                            ),
-                          ),
-                        ],
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
     }
 

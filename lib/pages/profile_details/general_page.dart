@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../models/user_profile_models.dart';
 import '../../services/app_settings_service.dart';
 import '../../services/sf_symbol_helper.dart';
 import '../../services/ui_scale.dart';
@@ -7,8 +8,14 @@ import '../../widgets/adaptive_bottom_sheet.dart';
 import 'profile_detail_page_utils.dart';
 
 class GeneralPage extends StatefulWidget {
-  const GeneralPage({super.key, this.isDarkOverride, this.prewarm = false});
+  const GeneralPage({
+    super.key,
+    required this.userProfile,
+    this.isDarkOverride,
+    this.prewarm = false,
+  });
 
+  final UserProfileData userProfile;
   final bool? isDarkOverride;
   final bool prewarm;
 
@@ -26,10 +33,10 @@ class _GeneralPageState extends State<GeneralPage>
     'assets/icons/eye.circle.fill.svg',
   };
 
-  bool _isDisplayNameAdded = false;
-  bool _isSkillsAdded = false;
-  String _displayName = '';
-  String _skills = '';
+  late bool _isDisplayNameAdded;
+  late bool _isSkillsAdded;
+  late String _displayName;
+  late String _skills;
   bool _scheduledOverlayWarmup = false;
   final Set<_GeneralOverlayType> _mountedPersistentOverlayHosts =
       <_GeneralOverlayType>{};
@@ -51,6 +58,10 @@ class _GeneralPageState extends State<GeneralPage>
   @override
   void initState() {
     super.initState();
+    _displayName = widget.userProfile.profile.displayName;
+    _skills = widget.userProfile.profile.skills.join(', ');
+    _isDisplayNameAdded = _displayName.isNotEmpty;
+    _isSkillsAdded = _skills.isNotEmpty;
     _displayNameController = TextEditingController(text: _displayName);
     _skillsController = TextEditingController(text: _skills);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -305,7 +316,7 @@ class _GeneralPageState extends State<GeneralPage>
       fieldTopSpacingFromSubtitle: 0,
       fieldLabelText: 'Anzeigename eingeben',
       initialFieldValue: _displayName,
-      fieldHintText: 'Gerafftes',
+      fieldHintText: widget.userProfile.profile.displayName,
       fieldHintColor: HSLColor.fromAHSL(0.70, 0, 0, 0.45).toColor(),
       validator: (value) {
         if (value.length < 4) {
@@ -330,10 +341,11 @@ class _GeneralPageState extends State<GeneralPage>
       subtitle: 'Skills werden in deinem Profil angezeigt',
       subtitleSingleLine: true,
       fieldTopSpacingFromSubtitle: 18,
-      centeredContentBuilder: (_) => const _SkillChipRow(),
+      centeredContentBuilder: (_) =>
+          _SkillChipRow(skills: widget.userProfile.profile.skills),
       fieldLabelText: 'Skills hinzufügen',
       initialFieldValue: _skills,
-      fieldHintText: 'Nachhilfe',
+      fieldHintText: widget.userProfile.profile.skillInputHint,
       fieldHintColor: HSLColor.fromAHSL(0.70, 0, 0, 0.45).toColor(),
       validator: (value) {
         if (value.length < 4) {
@@ -384,17 +396,12 @@ class _GeneralPageState extends State<GeneralPage>
     const Color addButtonTextColor = Color(0xFF4DAAFC);
     final Color destructiveButtonColor = HSLColor.fromAHSL(
       0.30,
-      359,
-      1.0,
-      0.63,
+      9,
+      0.65,
+      0.54,
     ).toColor();
-    final Color destructiveButtonStrokeColor = HSLColor.fromAHSL(
-      1.0,
-      359,
-      1.0,
-      0.63,
-    ).toColor();
-    final Color destructiveButtonTextColor = destructiveButtonStrokeColor;
+    const Color destructiveButtonStrokeColor = Color(0xFFD6543D);
+    const Color destructiveButtonTextColor = Color(0xFFD6543D);
     final double generalActionButtonWidth = s(121);
     final double generalActionButtonHeight = s(44);
     final _GeneralOverlayConfig displayNameConfig = _displayNameOverlayConfig();
@@ -1346,7 +1353,9 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
 }
 
 class _SkillChipRow extends StatefulWidget {
-  const _SkillChipRow();
+  const _SkillChipRow({required this.skills});
+
+  final List<String> skills;
 
   @override
   State<_SkillChipRow> createState() => _SkillChipRowState();
@@ -1355,11 +1364,9 @@ class _SkillChipRow extends StatefulWidget {
 class _SkillChipRowState extends State<_SkillChipRow> {
   static const Duration _chipSlideDuration = Duration(milliseconds: 220);
 
-  final List<_SkillChipItem> _chips = <_SkillChipItem>[
-    _SkillChipItem(id: 1, label: 'Garten...'),
-    _SkillChipItem(id: 2, label: 'Umzugs...'),
-    _SkillChipItem(id: 3, label: 'WLAN ein...'),
-  ];
+  late final List<_SkillChipItem> _chips = widget.skills.indexed
+      .map((entry) => _SkillChipItem(id: entry.$1, label: entry.$2))
+      .toList();
 
   Future<void> _removeChip(_SkillChipItem chip) async {
     if (chip.isRemoving) {

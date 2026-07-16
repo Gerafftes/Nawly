@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'data/user_profile_repository.dart';
+import 'models/user_profile_models.dart';
 import 'pages/tabs/start/jobs_find_content.dart';
 import 'pages/tabs/create_tab.dart';
 import 'pages/tabs/start/services_content.dart';
@@ -25,11 +27,15 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  runApp(const MyApp());
+  final UserProfileData userProfile = await const UserProfileDemoRepository()
+      .loadProfile();
+  runApp(MyApp(userProfile: userProfile));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, required this.userProfile});
+
+  final UserProfileData userProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -53,13 +59,15 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007AFF)),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(userProfile: userProfile),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, required this.userProfile});
+
+  final UserProfileData userProfile;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -780,6 +788,7 @@ class _HomeScreenState extends State<HomeScreen>
                 child: SizedBox.expand(
                   child: RepaintBoundary(
                     child: ProfileTabContent(
+                      userProfile: widget.userProfile,
                       textColor: textColor,
                       headerTopInset: profileHeaderTopInset,
                       isDark: isDark,
@@ -808,7 +817,10 @@ class _HomeScreenState extends State<HomeScreen>
                       },
                       onVerifyNow: () {
                         _openProfileDetailPage(
-                          (_) => VerificationPage(isDarkOverride: isDark),
+                          (_) => VerificationPage(
+                            userProfile: widget.userProfile,
+                            isDarkOverride: isDark,
+                          ),
                         );
                       },
                     ),
@@ -1087,6 +1099,7 @@ class _HomeScreenState extends State<HomeScreen>
                       child: ProfileDetailPrewarmHost(
                         target: _activeProfileWarmupTarget!,
                         isDark: isDark,
+                        userProfile: widget.userProfile,
                       ),
                     ),
                   ),

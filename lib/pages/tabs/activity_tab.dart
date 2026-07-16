@@ -34,6 +34,17 @@ extension _ActivityCardSheetContent on ActivityCardData {
     return AppleLiquidSheetContent(
       title: title,
       doneSemanticLabel: 'Schließen',
+      leadingAction: const AppleLiquidSheetToolbarAction(
+        systemImage: 'xmark',
+        semanticLabel: 'Schließen',
+        foregroundColor: Color(0xFFF2F2F2),
+      ),
+      trailingAction: const AppleLiquidSheetToolbarAction(
+        systemImage: 'checkmark',
+        semanticLabel: 'Schließen',
+        foregroundColor: Color(0xFFFFFFFF),
+        backgroundColor: Color(0xFF007AFF),
+      ),
       sections: <AppleLiquidSheetSection>[
         AppleLiquidSheetSection(
           title: 'Status',
@@ -307,15 +318,17 @@ class _ActivityTabContentState extends State<ActivityTabContent> {
                           color: const Color(0xFF64D2FF),
                         ),
                         SizedBox(width: s(8)),
-                        Text(
-                          data.status.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: const Color(0xFF64D2FF),
-                            fontSize: progressFontSize,
-                            fontWeight: FontWeight.normal,
-                            height: 1,
+                        Flexible(
+                          child: Text(
+                            data.status.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: const Color(0xFF64D2FF),
+                              fontSize: progressFontSize,
+                              fontWeight: FontWeight.normal,
+                              height: 1,
+                            ),
                           ),
                         ),
                       ],

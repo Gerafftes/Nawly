@@ -2,15 +2,15 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../../models/user_profile_models.dart';
 import 'legal_page.dart';
 import '../../liquid_glass/liquid_glass.dart';
 import '../../services/sf_symbol_helper.dart';
 import '../../services/ui_scale.dart';
 import 'profile_detail_page_utils.dart';
 
-enum _VerificationEntryKey { name, address, idCard, email, phone, twoFactor }
-
-enum _VerificationStatus { unverified, pending, verified }
+typedef _VerificationEntryKey = UserVerificationEntry;
+typedef _VerificationStatus = UserVerificationStatus;
 
 class VerificationPage extends StatefulWidget {
   static const Duration _progressAnimationDuration = Duration(
@@ -19,12 +19,12 @@ class VerificationPage extends StatefulWidget {
 
   const VerificationPage({
     super.key,
-    this.completedSteps = 0,
+    required this.userProfile,
     this.isDarkOverride,
     this.prewarm = false,
-  }) : assert(completedSteps >= 0 && completedSteps <= 6);
+  });
 
-  final int completedSteps;
+  final UserProfileData userProfile;
   final bool? isDarkOverride;
   final bool prewarm;
 
@@ -117,10 +117,9 @@ class _VerificationPageState extends State<VerificationPage>
   @override
   void initState() {
     super.initState();
-    _entryStatuses = {
-      for (final _VerificationEntryKey key in _progressOrder)
-        key: _VerificationStatus.unverified,
-    };
+    _entryStatuses = Map<_VerificationEntryKey, _VerificationStatus>.from(
+      widget.userProfile.verificationStatuses,
+    );
   }
 
   @override
@@ -220,7 +219,7 @@ class _VerificationPageState extends State<VerificationPage>
     final Color dividerColor = isDark
         ? const Color(0xFF1B1B1B)
         : const Color(0xFFE2E2E2);
-    const int totalSteps = 6;
+    final int totalSteps = _progressOrder.length;
     final int completedSteps = _countCompletedSteps();
     final bool isVerificationComplete = completedSteps == totalSteps;
     final double progress = completedSteps / totalSteps;

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' as intl;
+import '../../models/user_profile_models.dart';
 import '../../services/sf_symbol_helper.dart'; // Pfad ggf. anpassen
 import '../../services/ui_scale.dart';
 import '../../widgets/adaptive_bottom_sheet.dart';
@@ -23,11 +24,13 @@ String _formatShortMonth(DateTime date, BuildContext context) {
 class PaymentsPage extends StatefulWidget {
   const PaymentsPage({
     super.key,
+    required this.userProfile,
     this.isDarkOverride,
     this.prewarm = false,
     this.prewarmPhase = 2,
   });
 
+  final UserProfileData userProfile;
   final bool? isDarkOverride;
   final bool prewarm;
   final int prewarmPhase;
@@ -53,18 +56,8 @@ class _PaymentsPageState extends State<PaymentsPage>
   int? _standardPayoutIndex;
   int? _selectedPaymentMethodIndex;
   Timer? _paymentMethodPressTimer;
-
-  static const List<_PaymentMethodData> _paymentMethods = [
-    _PaymentMethodData(
-      iconPath: 'assets/icons/PayPal.svg',
-      semanticsLabel: 'PayPal',
-    ),
-    _PaymentMethodData(
-      iconPath: 'assets/icons/apple.logo.svg',
-      iconColor: Color(0xFF000000),
-      semanticsLabel: 'Apple Pay',
-    ),
-  ];
+  late final List<_PaymentMethodData> _paymentMethods;
+  late final List<UserPayoutAccountData> _payoutCards;
 
   // Slider State Variables
   double _payoutSwipeOffset = 0;
@@ -104,44 +97,16 @@ class _PaymentsPageState extends State<PaymentsPage>
     return 'PaymentsPage';
   }
 
-  static const List<_PayoutCardContent> _payoutCards = [
-    _PayoutCardContent(
-      title: 'Johann Eugen Mün...',
-      amount: '300,00 €',
-      statusText: 'Bereit zur Auszahlung',
-      feeLabel: 'Gebühr 0%',
-      minLabel: 'Mindestbetrag',
-      nextLabel: 'Nächste Auszahlung',
-      minAmount: '25,00 €',
-    ),
-    _PayoutCardContent(
-      title: 'Visa •••• 4242',
-      amount: '300,00 €',
-      statusText: 'Bereit zur Auszahlung',
-      feeLabel: 'Gebühr 1,5%',
-      minLabel: 'Mindestbetrag',
-      nextLabel: 'Nächste Auszahlung',
-      minAmount: '25,00 €',
-    ),
-    _PayoutCardContent(
-      title: 'Gutschein',
-      amount: '300,00 €',
-      statusText: 'Bereit zur Auszahlung',
-      feeLabel: 'Gebühr 0%',
-      minLabel: 'Mindestbetrag',
-      nextLabel: '',
-      minAmount: '5,00 €',
-    ),
-  ];
-
   Widget _buildBottomRightContent(
     UiScale ui, {
     required double rowHeight,
     required bool isGiftCard,
     required double giftCardOffsetY,
   }) {
-    switch (_selectedPayoutIndex) {
-      case 0:
+    final UserPayoutAccountData payoutAccount =
+        _payoutCards[_selectedPayoutIndex];
+    switch (payoutAccount.type) {
+      case UserPayoutAccountType.paypal:
         return SizedBox(
           height: rowHeight,
           child: Align(
@@ -153,7 +118,7 @@ class _PaymentsPageState extends State<PaymentsPage>
             ),
           ),
         );
-      case 1:
+      case UserPayoutAccountType.visa:
         return SizedBox(
           height: rowHeight,
           child: Align(
@@ -165,7 +130,7 @@ class _PaymentsPageState extends State<PaymentsPage>
             ),
           ),
         );
-      default:
+      case UserPayoutAccountType.giftCard:
         final double fontSize = ui.s(18);
         final double lineHeight = isGiftCard ? 1.1 : 1.0;
         final double singleLineHeight = fontSize * lineHeight;
@@ -177,7 +142,7 @@ class _PaymentsPageState extends State<PaymentsPage>
           fontWeight: FontWeight.w600,
           height: lineHeight,
         );
-        const textContent = 'Amazon.de\nGutschein';
+        final String textContent = payoutAccount.brandLabel;
 
         return SizedBox(
           height: rowHeight,
@@ -217,6 +182,10 @@ class _PaymentsPageState extends State<PaymentsPage>
   @override
   void initState() {
     super.initState();
+    _paymentMethods = widget.userProfile.payments.paymentMethods
+        .map(_PaymentMethodData.fromUserData)
+        .toList(growable: false);
+    _payoutCards = widget.userProfile.payments.payoutAccounts;
     _swipeChevronScaleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -846,8 +815,9 @@ class _PaymentsPageState extends State<PaymentsPage>
       );
     }
 
-    final _PayoutCardContent currentCard = _payoutCards[_selectedPayoutIndex];
-    final bool isGiftCard = _selectedPayoutIndex == 2;
+    final UserPayoutAccountData currentCard =
+        _payoutCards[_selectedPayoutIndex];
+    final bool isGiftCard = currentCard.type == UserPayoutAccountType.giftCard;
     final double statusRowHeight = s(33);
     final double cardContentBottomPadding = s(8);
     final double giftCardLabelOffsetY = s(-15);
@@ -1772,48 +1742,52 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                       CrossAxisAlignment
                                                                           .center,
                                                                   children: [
-                                                                    Row(
-                                                                      mainAxisSize:
-                                                                          MainAxisSize
-                                                                              .min,
-                                                                      crossAxisAlignment:
-                                                                          CrossAxisAlignment
-                                                                              .center,
-                                                                      children: [
-                                                                        SFSymbolHelper.getIcon(
-                                                                          iconPath:
-                                                                              'assets/icons/checkmark.seal.fill.svg',
-                                                                          width: s(
-                                                                            18,
-                                                                          ),
-                                                                          height: s(
-                                                                            18,
-                                                                          ),
-                                                                          color: const Color(
-                                                                            0xFF04C40A,
-                                                                          ),
-                                                                        ),
-                                                                        SizedBox(
-                                                                          width:
-                                                                              s(
-                                                                                6,
-                                                                              ),
-                                                                        ),
-                                                                        Text(
-                                                                          currentCard
-                                                                              .statusText,
-                                                                          style: TextStyle(
+                                                                    Expanded(
+                                                                      child: Row(
+                                                                        crossAxisAlignment:
+                                                                            CrossAxisAlignment.center,
+                                                                        children: [
+                                                                          SFSymbolHelper.getIcon(
+                                                                            iconPath:
+                                                                                'assets/icons/checkmark.seal.fill.svg',
+                                                                            width: s(
+                                                                              18,
+                                                                            ),
+                                                                            height: s(
+                                                                              18,
+                                                                            ),
                                                                             color: const Color(
-                                                                              0xFFB3B3B3,
+                                                                              0xFF04C40A,
                                                                             ),
-                                                                            fontSize: s(
-                                                                              16,
-                                                                            ),
-                                                                            fontWeight:
-                                                                                FontWeight.w600,
                                                                           ),
-                                                                        ),
-                                                                      ],
+                                                                          SizedBox(
+                                                                            width: s(
+                                                                              6,
+                                                                            ),
+                                                                          ),
+                                                                          Expanded(
+                                                                            child: Text(
+                                                                              currentCard.statusText,
+                                                                              maxLines: 1,
+                                                                              overflow: TextOverflow.ellipsis,
+                                                                              style: TextStyle(
+                                                                                color: const Color(
+                                                                                  0xFFB3B3B3,
+                                                                                ),
+                                                                                fontSize: s(
+                                                                                  16,
+                                                                                ),
+                                                                                fontWeight: FontWeight.w600,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                    ),
+                                                                    SizedBox(
+                                                                      width: s(
+                                                                        8,
+                                                                      ),
                                                                     ),
                                                                     _buildBottomRightContent(
                                                                       ui,
@@ -2624,7 +2598,7 @@ class _PaymentsWarmupPhaseTwoPage extends StatelessWidget {
   final double Function(double) s;
   final Color bgColor;
   final Color textColor;
-  final _PayoutCardContent payoutCard;
+  final UserPayoutAccountData payoutCard;
 
   @override
   Widget build(BuildContext context) {
@@ -2739,26 +2713,6 @@ class _PaymentsWarmupPhaseTwoPage extends StatelessWidget {
   }
 }
 
-class _PayoutCardContent {
-  final String title;
-  final String amount;
-  final String statusText;
-  final String feeLabel;
-  final String minLabel;
-  final String nextLabel;
-  final String minAmount;
-
-  const _PayoutCardContent({
-    required this.title,
-    required this.amount,
-    required this.statusText,
-    required this.feeLabel,
-    required this.minLabel,
-    required this.nextLabel,
-    required this.minAmount,
-  });
-}
-
 class _PaymentMethodData {
   final String iconPath;
   final Color? iconColor;
@@ -2768,6 +2722,22 @@ class _PaymentMethodData {
     required this.semanticsLabel,
     this.iconColor,
   });
+
+  factory _PaymentMethodData.fromUserData(UserPaymentMethodData data) {
+    switch (data.type) {
+      case UserPaymentMethodType.paypal:
+        return const _PaymentMethodData(
+          iconPath: 'assets/icons/PayPal.svg',
+          semanticsLabel: 'PayPal',
+        );
+      case UserPaymentMethodType.applePay:
+        return const _PaymentMethodData(
+          iconPath: 'assets/icons/apple.logo.svg',
+          iconColor: Color(0xFF000000),
+          semanticsLabel: 'Apple Pay',
+        );
+    }
+  }
 }
 
 class _SwipeTrailClipper extends CustomClipper<Rect> {

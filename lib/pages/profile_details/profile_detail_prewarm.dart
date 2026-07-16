@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../models/user_profile_models.dart';
 import '../../services/sf_symbol_helper.dart';
 import 'affiliate_page.dart';
 import 'feedback_page.dart';
@@ -103,10 +104,12 @@ class ProfileDetailPrewarmHost extends StatelessWidget {
     super.key,
     required this.target,
     required this.isDark,
+    required this.userProfile,
   });
 
   final ProfileDetailPrewarmTarget target;
   final bool isDark;
+  final UserProfileData userProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -114,27 +117,38 @@ class ProfileDetailPrewarmHost extends StatelessWidget {
       case ProfileDetailPrewarmTarget.notifications:
         return NotificationsPage(isDarkOverride: isDark, prewarm: true);
       case ProfileDetailPrewarmTarget.verification:
-        return VerificationPage(isDarkOverride: isDark, prewarm: true);
+        return VerificationPage(
+          userProfile: userProfile,
+          isDarkOverride: isDark,
+          prewarm: true,
+        );
       case ProfileDetailPrewarmTarget.paymentsPhase1:
         return PaymentsPage(
+          userProfile: userProfile,
           isDarkOverride: isDark,
           prewarm: true,
           prewarmPhase: 0,
         );
       case ProfileDetailPrewarmTarget.paymentsPhase2:
         return PaymentsPage(
+          userProfile: userProfile,
           isDarkOverride: isDark,
           prewarm: true,
           prewarmPhase: 1,
         );
       case ProfileDetailPrewarmTarget.payments:
         return PaymentsPage(
+          userProfile: userProfile,
           isDarkOverride: isDark,
           prewarm: true,
           prewarmPhase: 2,
         );
       case ProfileDetailPrewarmTarget.general:
-        return GeneralPage(isDarkOverride: isDark, prewarm: true);
+        return GeneralPage(
+          userProfile: userProfile,
+          isDarkOverride: isDark,
+          prewarm: true,
+        );
       case ProfileDetailPrewarmTarget.legal:
         return LegalPage(isDarkOverride: isDark);
       case ProfileDetailPrewarmTarget.affiliate:
@@ -150,10 +164,12 @@ class ProfileDetailPrewarmBatchHost extends StatelessWidget {
     super.key,
     required this.targets,
     required this.isDark,
+    required this.userProfile,
   });
 
   final List<ProfileDetailPrewarmTarget> targets;
   final bool isDark;
+  final UserProfileData userProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +177,11 @@ class ProfileDetailPrewarmBatchHost extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         for (final ProfileDetailPrewarmTarget target in targets)
-          ProfileDetailPrewarmHost(target: target, isDark: isDark),
+          ProfileDetailPrewarmHost(
+            target: target,
+            isDark: isDark,
+            userProfile: userProfile,
+          ),
       ],
     );
   }

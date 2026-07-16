@@ -30,14 +30,14 @@ class ServicesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
-    final double infoCardHeight = ui.s(106);
+    final double infoCardMinHeight = ui.s(106);
     final double sectionHeaderHeight = ui.s(44);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          height: infoCardHeight,
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: infoCardMinHeight),
           child: Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(
