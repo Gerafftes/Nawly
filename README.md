@@ -1,11 +1,27 @@
-# Nawly
+<p align="center">
+  <img src="assets/icons/logo.png" width="160" alt="Nawly Logo">
+</p>
 
-[![Status](https://img.shields.io/badge/status-work%20in%20progress-orange)](#)
-[![Production Ready](https://img.shields.io/badge/production%20ready-no-red)](#)
-[![Platform](https://img.shields.io/badge/platform-iOS-lightgrey)](https://flutter.dev)
+<h1 align="center">Nawly</h1>
 
+<p align="center">
+  Finde Hilfe in deiner Nähe oder verdiene Geld mit kleinen Jobs und Services.<br>
+  Lokal, direkt und unkompliziert.
+</p>
 
-Mit Nawly findest du schnelle Hilfe in deiner Naehe oder verdienst Geld mit kleinen Jobs und Services. Erstelle Aufgaben, buche Services oder hilf anderen direkt vor Ort.
+<p align="center">
+  <a href="#idee">Idee</a> ·
+  <a href="#lösung">Lösung</a> ·
+  <a href="#hauptseiten">Screenshots</a> ·
+  <a href="docs/bilder/weitere/">Weitere Bilder</a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/status-work%20in%20progress-orange" alt="Status: Work in Progress">
+  <img src="https://img.shields.io/badge/Flutter-App-02569B?logo=flutter&logoColor=white" alt="Flutter App">
+</p>
+
+Mit Nawly findest du schnelle Hilfe in deiner Nähe oder verdienst Geld mit kleinen Jobs und Services. Erstelle Aufgaben, buche Services oder hilf anderen direkt vor Ort.
 
 ## Idee
 
