@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/logo.png" width="160" alt="Nawly Logo">
+  <img src="docs/assets/readme/test1-icon-preview.svg" width="160" alt="Nawly Test1 Icon">
 </p>
 
 <h1 align="center">Nawly</h1>
