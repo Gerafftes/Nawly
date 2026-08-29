@@ -22,9 +22,6 @@
   <img src="https://img.shields.io/badge/Flutter-App-02569B?logo=flutter&logoColor=white" alt="Flutter App">
 </p>
 
-<p align="center">
-  <img src="docs/bilder/hauptseiten/start.png" width="220" alt="Nawly Startseite">
-</p>
 
 ## Was ist Nawly?
 
