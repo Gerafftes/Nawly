@@ -1,3 +1,5 @@
+import 'nickname.dart';
+
 enum UserVerificationEntry { name, address, idCard, email, phone, twoFactor }
 
 enum UserVerificationStatus { unverified, pending, verified }
@@ -39,19 +41,20 @@ class UserProfileData {
 }
 
 class UserProfileSummaryData {
-  const UserProfileSummaryData({
-    required this.displayName,
-    required this.avatarInitial,
+  UserProfileSummaryData({
+    required this.name,
+    required String nickname,
     required this.rating,
     required this.completedJobs,
     required this.skillInputHint,
     required this.skills,
-  });
+  }) : assert(name.isNotEmpty),
+       nickname = NicknameRules.requireValid(nickname);
 
   factory UserProfileSummaryData.fromJson(Map<String, Object?> json) {
     return UserProfileSummaryData(
-      displayName: json['displayName'] as String,
-      avatarInitial: json['avatarInitial'] as String,
+      name: json['name'] as String,
+      nickname: NicknameRules.requireValid(json['nickname']),
       rating: (json['rating'] as num).toDouble(),
       completedJobs: json['completedJobs'] as int,
       skillInputHint: json['skillInputHint'] as String,
@@ -59,8 +62,8 @@ class UserProfileSummaryData {
     );
   }
 
-  final String displayName;
-  final String avatarInitial;
+  final String name;
+  final String nickname;
   final double rating;
   final int completedJobs;
   final String skillInputHint;
@@ -68,6 +71,9 @@ class UserProfileSummaryData {
 
   String get formattedRating =>
       rating.toStringAsFixed(1).replaceFirst('.', ',');
+
+  String get avatarInitial => NicknameRules.initial(nickname);
+  String get avatarSystemImage => NicknameRules.avatarSystemImage(nickname);
 }
 
 class UserPaymentsData {

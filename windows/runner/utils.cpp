@@ -1,11 +1,25 @@
 #include "utils.h"
 
 #include <flutter_windows.h>
+#include <climits>
+#include <cstddef>
 #include <io.h>
 #include <stdio.h>
 #include <windows.h>
 
 #include <iostream>
+
+namespace {
+constexpr size_t kMaxCommandLineArgumentLength = 1024 * 1024;
+
+size_t BoundedWideStringLength(const wchar_t* value) {
+  size_t length = 0;
+  while (length <= kMaxCommandLineArgumentLength && value[length] != L'\0') {
+    ++length;
+  }
+  return length;
+}
+}  // namespace
 
 void CreateAndAttachConsole() {
   if (::AllocConsole()) {
@@ -45,20 +59,36 @@ std::string Utf8FromUtf16(const wchar_t* utf16_string) {
   if (utf16_string == nullptr) {
     return std::string();
   }
-  unsigned int target_length = ::WideCharToMultiByte(
-      CP_UTF8, WC_ERR_INVALID_CHARS, utf16_string,
-      -1, nullptr, 0, nullptr, nullptr)
-    -1; // remove the trailing null character
-  int input_length = (int)wcslen(utf16_string);
-  std::string utf8_string;
-  if (target_length == 0 || target_length > utf8_string.max_size()) {
-    return utf8_string;
+
+  const size_t input_length = BoundedWideStringLength(utf16_string);
+  if (input_length > kMaxCommandLineArgumentLength || input_length > INT_MAX) {
+    return std::string();
   }
-  utf8_string.resize(target_length);
-  int converted_length = ::WideCharToMultiByte(
+
+  const int input_length_for_conversion = static_cast<int>(input_length);
+  const int target_length_with_null = ::WideCharToMultiByte(
       CP_UTF8, WC_ERR_INVALID_CHARS, utf16_string,
-      input_length, utf8_string.data(), target_length, nullptr, nullptr);
-  if (converted_length == 0) {
+      -1, nullptr, 0, nullptr, nullptr);
+  if (target_length_with_null <= 0) {
+    return std::string();
+  }
+
+  const int target_length = target_length_with_null - 1;
+  if (target_length <= 0) {
+    return std::string();
+  }
+
+  std::string utf8_string;
+  if (static_cast<size_t>(target_length) > kMaxCommandLineArgumentLength ||
+      static_cast<size_t>(target_length) > utf8_string.max_size()) {
+    return std::string();
+  }
+  utf8_string.resize(static_cast<size_t>(target_length));
+  const int converted_length = ::WideCharToMultiByte(
+      CP_UTF8, WC_ERR_INVALID_CHARS, utf16_string,
+      input_length_for_conversion, utf8_string.data(), target_length,
+      nullptr, nullptr);
+  if (converted_length != target_length) {
     return std::string();
   }
   return utf8_string;

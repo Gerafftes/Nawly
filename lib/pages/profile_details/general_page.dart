@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../models/nickname.dart';
+import '../../models/profile_text_draft.dart';
 import '../../models/user_profile_models.dart';
 import '../../services/app_settings_service.dart';
 import '../../services/sf_symbol_helper.dart';
@@ -35,15 +37,17 @@ class _GeneralPageState extends State<GeneralPage>
 
   late bool _isDisplayNameAdded;
   late bool _isSkillsAdded;
-  late String _displayName;
-  late String _skills;
+  late final ProfileTextDraft _nicknameDraft;
+  late final ProfileTextDraft _skillsDraft;
+  String get _displayName => _nicknameDraft.savedValue;
+  String get _skills => _skillsDraft.savedValue;
   bool _scheduledOverlayWarmup = false;
   final Set<_GeneralOverlayType> _mountedPersistentOverlayHosts =
       <_GeneralOverlayType>{};
   Timer? _generalOverlayPreloadTimer;
   _GeneralOverlayType? _activeOverlayType;
-  String? _displayNameValidationErrorText;
-  String? _skillsValidationErrorText;
+  String? get _displayNameValidationErrorText => _nicknameDraft.error;
+  String? get _skillsValidationErrorText => _skillsDraft.error;
   Stopwatch? _displayNameOverlayStopwatch;
   Stopwatch? _skillsOverlayStopwatch;
   late final TextEditingController _displayNameController;
@@ -58,8 +62,12 @@ class _GeneralPageState extends State<GeneralPage>
   @override
   void initState() {
     super.initState();
-    _displayName = widget.userProfile.profile.displayName;
-    _skills = widget.userProfile.profile.skills.join(', ');
+    _nicknameDraft = ProfileTextDraft.nickname(
+      widget.userProfile.profile.nickname,
+    );
+    _skillsDraft = ProfileTextDraft.skills(
+      widget.userProfile.profile.skills.join(', '),
+    );
     _isDisplayNameAdded = _displayName.isNotEmpty;
     _isSkillsAdded = _skills.isNotEmpty;
     _displayNameController = TextEditingController(text: _displayName);
@@ -141,6 +149,7 @@ class _GeneralPageState extends State<GeneralPage>
       _mountedPersistentOverlayHosts.isNotEmpty;
 
   void _showGeneralOverlay(_GeneralOverlayType overlayType) {
+    _draftForOverlayType(overlayType).begin();
     final _GeneralOverlayConfig config = _configForOverlayType(overlayType);
     final TextEditingController controller = _controllerForOverlayType(
       overlayType,
@@ -154,6 +163,10 @@ class _GeneralPageState extends State<GeneralPage>
       ),
     );
 
+    _showPersistentGeneralOverlay(overlayType);
+  }
+
+  void _showPersistentGeneralOverlay(_GeneralOverlayType overlayType) {
     setState(() {
       _setValidationErrorForOverlayType(overlayType, null);
       _setOverlayStopwatchForType(overlayType, Stopwatch()..start());
@@ -179,6 +192,7 @@ class _GeneralPageState extends State<GeneralPage>
       return;
     }
 
+    _draftForOverlayType(_activeOverlayType!).cancel();
     FocusScope.of(context).unfocus();
     setState(() {
       _setValidationErrorForOverlayType(_activeOverlayType!, null);
@@ -207,24 +221,15 @@ class _GeneralPageState extends State<GeneralPage>
     }
   }
 
-  String? _validationErrorForOverlayType(_GeneralOverlayType overlayType) {
-    switch (overlayType) {
-      case _GeneralOverlayType.displayName:
-        return _displayNameValidationErrorText;
-      case _GeneralOverlayType.skills:
-        return _skillsValidationErrorText;
-    }
-  }
-
   void _setValidationErrorForOverlayType(
     _GeneralOverlayType overlayType,
     String? validationErrorText,
   ) {
     switch (overlayType) {
       case _GeneralOverlayType.displayName:
-        _displayNameValidationErrorText = validationErrorText;
+        _nicknameDraft.error = validationErrorText;
       case _GeneralOverlayType.skills:
-        _skillsValidationErrorText = validationErrorText;
+        _skillsDraft.error = validationErrorText;
     }
   }
 
@@ -249,24 +254,20 @@ class _GeneralPageState extends State<GeneralPage>
     }
   }
 
-  bool _isAddButtonActiveForOverlayType(_GeneralOverlayType overlayType) {
-    final _GeneralOverlayConfig config = _configForOverlayType(overlayType);
-    final String currentValue = _controllerForOverlayType(overlayType).text;
-    return config.validator?.call(currentValue.trim()) == null;
-  }
+  ProfileTextDraft _draftForOverlayType(_GeneralOverlayType type) =>
+      type == _GeneralOverlayType.displayName ? _nicknameDraft : _skillsDraft;
+
+  bool _isAddButtonActiveForOverlayType(_GeneralOverlayType overlayType) =>
+      _draftForOverlayType(
+        overlayType,
+      ).validate(_controllerForOverlayType(overlayType).text) ==
+      null;
 
   void _handleOverlayDraftChanged(
     _GeneralOverlayType overlayType,
     String value,
   ) {
-    if (_validationErrorForOverlayType(overlayType) == null) {
-      setState(() {});
-      return;
-    }
-
-    setState(() {
-      _setValidationErrorForOverlayType(overlayType, null);
-    });
+    setState(() => _draftForOverlayType(overlayType).update(value));
   }
 
   void _handleOverlaySave(
@@ -277,19 +278,13 @@ class _GeneralPageState extends State<GeneralPage>
     final TextEditingController controller = _controllerForOverlayType(
       overlayType,
     );
-    final String nextValue = controller.text.trim();
-    final String? validationError = config.validator?.call(nextValue);
-
-    if (validationError != null) {
-      setState(() {
-        _setValidationErrorForOverlayType(overlayType, validationError);
-      });
+    final ProfileTextDraft draft = _draftForOverlayType(overlayType);
+    draft.update(controller.text);
+    final String? resolvedValue = draft.commit();
+    if (resolvedValue == null) {
+      setState(() {});
       return;
     }
-
-    final String resolvedValue = nextValue.isEmpty
-        ? (config.initialFieldValue ?? '')
-        : nextValue;
 
     config.onSave?.call(resolvedValue);
     controller.value = TextEditingValue(
@@ -308,25 +303,20 @@ class _GeneralPageState extends State<GeneralPage>
 
   _GeneralOverlayConfig _displayNameOverlayConfig() {
     return _GeneralOverlayConfig(
-      performanceLabel: 'display_name',
-      title: 'Anzeigename hinzufügen',
+      performanceLabel: 'nickname',
+      title: 'Nickname ändern',
       preferredHeight: 324,
-      subtitle: 'Dieser Name ist öffentlich sichtbar',
+      subtitle: 'Dieser Nickname ist eindeutig und öffentlich sichtbar',
       showAddButton: false,
       fieldTopSpacingFromSubtitle: 0,
-      fieldLabelText: 'Anzeigename eingeben',
+      fieldLabelText: 'Nickname eingeben',
       initialFieldValue: _displayName,
-      fieldHintText: widget.userProfile.profile.displayName,
+      fieldHintText: widget.userProfile.profile.nickname,
       fieldHintColor: HSLColor.fromAHSL(0.70, 0, 0, 0.45).toColor(),
-      validator: (value) {
-        if (value.length < 4) {
-          return 'Anzeigename muss mindestens 4 Zeichen haben';
-        }
-        return null;
-      },
+      maxLength: NicknameRules.maxLength,
+      useNativeLikeToolbar: true,
       onSave: (value) {
         setState(() {
-          _displayName = value;
           _isDisplayNameAdded = true;
         });
       },
@@ -343,21 +333,11 @@ class _GeneralPageState extends State<GeneralPage>
       fieldTopSpacingFromSubtitle: 18,
       centeredContentBuilder: (_) =>
           _SkillChipRow(skills: widget.userProfile.profile.skills),
-      fieldLabelText: 'Skills hinzufügen',
+      useNativeLikeToolbar: true,
+      fieldLabelText: null,
       initialFieldValue: _skills,
       fieldHintText: widget.userProfile.profile.skillInputHint,
       fieldHintColor: HSLColor.fromAHSL(0.70, 0, 0, 0.45).toColor(),
-      validator: (value) {
-        if (value.length < 4) {
-          return 'Skills müssen mindestens 4 Zeichen lang sein';
-        }
-        return null;
-      },
-      onSave: (value) {
-        setState(() {
-          _skills = value;
-        });
-      },
     );
   }
 
@@ -486,9 +466,9 @@ class _GeneralPageState extends State<GeneralPage>
                                       borderRadius: s(15),
                                       children: [
                                         _GeneralInfoCard(
-                                          title: 'Anzeigename',
+                                          title: 'Nickname',
                                           supportingText: _displayName.isEmpty
-                                              ? 'Anzeigename eingeben'
+                                              ? 'Nickname eingeben'
                                               : _displayName,
                                           footerLabel: 'Öffentlich sichtbar',
                                           showFooterIcon: true,
@@ -844,6 +824,7 @@ class _GeneralPersistentOverlayHost extends StatelessWidget {
                 isAddButtonActive: displayNameIsAddButtonActive,
                 onDraftChanged: onDisplayNameDraftChanged,
                 onSave: onDisplayNameSave,
+                onDismiss: onDismiss,
               ),
             ),
           if (showSkillsHost)
@@ -858,6 +839,7 @@ class _GeneralPersistentOverlayHost extends StatelessWidget {
                 isAddButtonActive: skillsIsAddButtonActive,
                 onDraftChanged: onSkillsDraftChanged,
                 onSave: onSkillsSave,
+                onDismiss: onDismiss,
               ),
             ),
         ],
@@ -911,8 +893,9 @@ class _GeneralOverlayConfig {
     this.initialFieldValue,
     this.fieldHintText,
     this.fieldHintColor,
+    this.maxLength,
+    this.useNativeLikeToolbar = false,
     this.onSave,
-    this.validator,
   });
 
   final String performanceLabel;
@@ -927,8 +910,9 @@ class _GeneralOverlayConfig {
   final String? initialFieldValue;
   final String? fieldHintText;
   final Color? fieldHintColor;
+  final int? maxLength;
+  final bool useNativeLikeToolbar;
   final ValueChanged<String>? onSave;
-  final String? Function(String value)? validator;
 }
 
 class _GeneralOverlaySheet extends StatefulWidget {
@@ -941,6 +925,7 @@ class _GeneralOverlaySheet extends StatefulWidget {
     required this.isAddButtonActive,
     required this.onDraftChanged,
     required this.onSave,
+    required this.onDismiss,
   });
 
   final _GeneralOverlayConfig config;
@@ -951,6 +936,7 @@ class _GeneralOverlaySheet extends StatefulWidget {
   final bool isAddButtonActive;
   final ValueChanged<String> onDraftChanged;
   final void Function({required bool closeAfterSave}) onSave;
+  final VoidCallback onDismiss;
 
   @override
   State<_GeneralOverlaySheet> createState() => _GeneralOverlaySheetState();
@@ -1028,6 +1014,202 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
     );
   }
 
+  Widget _buildNativeLikeToolbarButton({
+    required double Function(double) s,
+    required String semanticLabel,
+    required IconData icon,
+    required VoidCallback onPressed,
+    Color? backgroundColor,
+  }) {
+    final Widget iconWidget = Icon(
+      icon,
+      color: backgroundColor == null ? const Color(0xFFE6E6E6) : Colors.white,
+      size: s(backgroundColor == null ? 24 : 20),
+    );
+
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      child: SizedBox(
+        width: s(44),
+        height: s(44),
+        child: Center(
+          child: backgroundColor == null
+              ? IconButton(
+                  onPressed: onPressed,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  splashRadius: s(22),
+                  icon: iconWidget,
+                )
+              : Material(
+                  color: backgroundColor,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: onPressed,
+                    child: SizedBox(
+                      width: s(36),
+                      height: s(36),
+                      child: Center(child: iconWidget),
+                    ),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNativeLikeSkillsSheet({
+    required double Function(double) s,
+    required double overlayLeftInset,
+    required double overlayRightInset,
+    required double overlaySafeBottom,
+    required Widget fieldEditor,
+    required Widget? centeredContent,
+  }) {
+    final Color titleColor = widget.isDark
+        ? const Color(0xFFF2F2F2)
+        : const Color(0xFF0D0D0D);
+
+    return Padding(
+      padding: EdgeInsets.only(top: s(8)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: overlayLeftInset),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildNativeLikeToolbarButton(
+                  s: s,
+                  semanticLabel: 'Schließen',
+                  icon: Icons.close,
+                  onPressed: widget.onDismiss,
+                ),
+                _buildNativeLikeToolbarButton(
+                  s: s,
+                  semanticLabel: 'Speichern',
+                  icon: Icons.check,
+                  backgroundColor: const Color(0xFF007AFF),
+                  onPressed: () => widget.onSave(closeAfterSave: true),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              overlayLeftInset,
+              s(1),
+              overlayRightInset,
+              0,
+            ),
+            child: Text(
+              widget.config.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: titleColor,
+                fontSize: s(30),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (widget.config.subtitle != null)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                overlayLeftInset,
+                s(3),
+                overlayRightInset,
+                0,
+              ),
+              child: Text(
+                widget.config.subtitle!,
+                maxLines: widget.config.subtitleSingleLine ? 1 : 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: const Color(0xFFB3B3B3),
+                  fontSize: s(16),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                overlayLeftInset,
+                s(14),
+                overlayRightInset,
+                overlaySafeBottom,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  fieldEditor,
+                  if (widget.validationErrorText != null)
+                    Padding(
+                      padding: EdgeInsets.only(top: s(6)),
+                      child: Text(
+                        widget.validationErrorText!,
+                        style: TextStyle(
+                          color: const Color(0xFFD6543D),
+                          fontSize: s(13),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  if (centeredContent != null) ...[
+                    SizedBox(height: s(14)),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: centeredContent,
+                      ),
+                    ),
+                  ],
+                  if (widget.config.showAddButton) ...[
+                    SizedBox(height: s(20)),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => widget.onSave(closeAfterSave: false),
+                      child: Container(
+                        height: s(60),
+                        decoration: BoxDecoration(
+                          color: widget.isAddButtonActive
+                              ? const Color(0xFF007AFF)
+                              : HSLColor.fromAHSL(
+                                  0.30,
+                                  211,
+                                  1.0,
+                                  0.50,
+                                ).toColor(),
+                          borderRadius: BorderRadius.circular(s(15)),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Hinzufügen',
+                          style: TextStyle(
+                            color: widget.isAddButtonActive
+                                ? const Color(0xFFF2F2F2)
+                                : HSLColor.fromAHSL(0.70, 0, 0, 0.95).toColor(),
+                            fontSize: s(18),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final ui = UiScale.of(context, designWidth: 402);
@@ -1065,6 +1247,14 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
                   child: _isFieldEditorReady
                       ? TextFormField(
                           controller: widget.textController,
+                          maxLength: widget.config.maxLength,
+                          buildCounter:
+                              (
+                                _, {
+                                required int currentLength,
+                                required bool isFocused,
+                                required int? maxLength,
+                              }) => null,
                           onTapOutside: (_) {
                             FocusScope.of(context).unfocus();
                           },
@@ -1139,215 +1329,240 @@ class _GeneralOverlaySheetState extends State<_GeneralOverlaySheet> {
     return AdaptiveBottomSheet(
       isDark: widget.isDark,
       preferredHeight: s(widget.config.preferredHeight),
-      child: Padding(
-        padding: EdgeInsets.only(top: s(23)),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                left: overlayLeftInset,
-                right: overlayRightInset,
-              ),
+      child: widget.config.useNativeLikeToolbar
+          ? _buildNativeLikeSkillsSheet(
+              s: s,
+              overlayLeftInset: overlayLeftInset,
+              overlayRightInset: overlayRightInset,
+              overlaySafeBottom: overlaySafeBottom,
+              fieldEditor: fieldEditor,
+              centeredContent: centeredContent,
+            )
+          : Padding(
+              padding: EdgeInsets.only(top: s(23)),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        widget.config.title,
-                        maxLines: 1,
-                        softWrap: false,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: widget.isDark
-                              ? const Color(0xFFF2F2F2)
-                              : const Color(0xFF0D0D0D),
-                          fontSize: s(30),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: overlayLeftInset,
+                      right: overlayRightInset,
                     ),
-                  ),
-                  if (widget.config.subtitle != null) ...[
-                    SizedBox(height: s(0)),
-                    if (widget.config.subtitleSingleLine)
-                      SizedBox(
-                        width: double.infinity,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            widget.config.subtitle!,
-                            maxLines: 1,
-                            softWrap: false,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: const Color(0xFFB3B3B3),
-                              fontSize: s(20),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      Text(
-                        widget.config.subtitle!,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: const Color(0xFFB3B3B3),
-                          fontSize: s(20),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                  ],
-                ],
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  left: overlayLeftInset,
-                  right: overlayRightInset,
-                ),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final double centeredContentReservedHeight =
-                        centeredContent == null ? 0 : s(39);
-
-                    return SizedBox(
-                      width: double.infinity,
-                      height: constraints.maxHeight,
-                      child: Stack(
-                        children: [
-                          if (widget.config.fieldTopSpacingFromSubtitle != null)
-                            Positioned(
-                              top: s(6),
-                              left: 0,
-                              right: 0,
-                              child: SizedBox(
-                                height: validationMessageHeight,
-                                child: widget.validationErrorText == null
-                                    ? const SizedBox.shrink()
-                                    : Text(
-                                        widget.validationErrorText!,
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          color: const Color(0xFFD6543D),
-                                          fontSize: s(13),
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              widget.config.title,
+                              maxLines: 1,
+                              softWrap: false,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: widget.isDark
+                                    ? const Color(0xFFF2F2F2)
+                                    : const Color(0xFF0D0D0D),
+                                fontSize: s(30),
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                          Padding(
-                            padding: EdgeInsets.only(
-                              top: validationMessageHeight,
-                              bottom: centeredContentReservedHeight,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (widget.config.fieldTopSpacingFromSubtitle !=
-                                    null)
-                                  SizedBox(
-                                    height: s(
-                                      widget
-                                          .config
-                                          .fieldTopSpacingFromSubtitle!,
-                                    ),
-                                  ),
-                                fieldEditor,
-                              ],
-                            ),
                           ),
-                          if (centeredContent != null)
-                            Positioned(
-                              left: 0,
-                              right: 0,
-                              bottom: 0,
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: centeredContent,
+                        ),
+                        if (widget.config.subtitle != null) ...[
+                          SizedBox(height: s(0)),
+                          if (widget.config.subtitleSingleLine)
+                            SizedBox(
+                              width: double.infinity,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  widget.config.subtitle!,
+                                  maxLines: 1,
+                                  softWrap: false,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: const Color(0xFFB3B3B3),
+                                    fontSize: s(20),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            Text(
+                              widget.config.subtitle!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: const Color(0xFFB3B3B3),
+                                fontSize: s(20),
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                         ],
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: overlayLeftInset,
+                        right: overlayRightInset,
                       ),
-                    );
-                  },
-                ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final double centeredContentReservedHeight =
+                              centeredContent == null ? 0 : s(39);
+
+                          return SizedBox(
+                            width: double.infinity,
+                            height: constraints.maxHeight,
+                            child: Stack(
+                              children: [
+                                if (widget.config.fieldTopSpacingFromSubtitle !=
+                                    null)
+                                  Positioned(
+                                    top: s(6),
+                                    left: 0,
+                                    right: 0,
+                                    child: SizedBox(
+                                      height: validationMessageHeight,
+                                      child: widget.validationErrorText == null
+                                          ? const SizedBox.shrink()
+                                          : Text(
+                                              widget.validationErrorText!,
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                color: const Color(0xFFD6543D),
+                                                fontSize: s(13),
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                Padding(
+                                  padding: EdgeInsets.only(
+                                    top: validationMessageHeight,
+                                    bottom: centeredContentReservedHeight,
+                                  ),
+                                  child: SingleChildScrollView(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (widget
+                                                .config
+                                                .fieldTopSpacingFromSubtitle !=
+                                            null)
+                                          SizedBox(
+                                            height: s(
+                                              widget
+                                                  .config
+                                                  .fieldTopSpacingFromSubtitle!,
+                                            ),
+                                          ),
+                                        fieldEditor,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (centeredContent != null)
+                                  Positioned(
+                                    left: 0,
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: centeredContent,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  if (widget.config.initialFieldValue != null)
+                    SizedBox(height: s(17)),
+                  if (widget.config.showAddButton) ...[
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: overlayLeftInset,
+                        right: overlayRightInset,
+                      ),
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => widget.onSave(closeAfterSave: false),
+                        child: Container(
+                          height: s(60),
+                          decoration: BoxDecoration(
+                            color: widget.isAddButtonActive
+                                ? const Color(0xFF007AFF)
+                                : HSLColor.fromAHSL(
+                                    0.30,
+                                    211,
+                                    1.0,
+                                    0.50,
+                                  ).toColor(),
+                            borderRadius: BorderRadius.circular(s(15)),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            'Hinzufügen',
+                            style: TextStyle(
+                              color: widget.isAddButtonActive
+                                  ? const Color(0xFFF2F2F2)
+                                  : HSLColor.fromAHSL(
+                                      0.70,
+                                      0,
+                                      0,
+                                      0.95,
+                                    ).toColor(),
+                              fontSize: s(18),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: s(10)),
+                  ],
+                  Padding(
+                    padding: EdgeInsets.only(
+                      left: overlayLeftInset,
+                      right: overlayRightInset,
+                      bottom: overlaySafeBottom,
+                    ),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => widget.onSave(closeAfterSave: true),
+                      child: Container(
+                        height: s(60),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(s(15)),
+                          border: Border.all(
+                            color: const Color(0xFF007AFF),
+                            width: s(1),
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          'Speichern',
+                          style: TextStyle(
+                            color: const Color(0xFFF2F2F2),
+                            fontSize: s(18),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            if (widget.config.initialFieldValue != null)
-              SizedBox(height: s(17)),
-            if (widget.config.showAddButton) ...[
-              Padding(
-                padding: EdgeInsets.only(
-                  left: overlayLeftInset,
-                  right: overlayRightInset,
-                ),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => widget.onSave(closeAfterSave: false),
-                  child: Container(
-                    height: s(60),
-                    decoration: BoxDecoration(
-                      color: widget.isAddButtonActive
-                          ? const Color(0xFF007AFF)
-                          : HSLColor.fromAHSL(0.30, 211, 1.0, 0.50).toColor(),
-                      borderRadius: BorderRadius.circular(s(15)),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Hinzufügen',
-                      style: TextStyle(
-                        color: widget.isAddButtonActive
-                            ? const Color(0xFFF2F2F2)
-                            : HSLColor.fromAHSL(0.70, 0, 0, 0.95).toColor(),
-                        fontSize: s(18),
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: s(10)),
-            ],
-            Padding(
-              padding: EdgeInsets.only(
-                left: overlayLeftInset,
-                right: overlayRightInset,
-                bottom: overlaySafeBottom,
-              ),
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => widget.onSave(closeAfterSave: true),
-                child: Container(
-                  height: s(60),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    borderRadius: BorderRadius.circular(s(15)),
-                    border: Border.all(
-                      color: const Color(0xFF007AFF),
-                      width: s(1),
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    'Speichern',
-                    style: TextStyle(
-                      color: const Color(0xFFF2F2F2),
-                      fontSize: s(18),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -9,7 +9,10 @@ void main() {
     final UserProfileData userProfile = await const UserProfileDemoRepository()
         .loadProfile();
 
-    expect(userProfile.profile.displayName, 'Gerafftes');
+    expect(userProfile.profile.name, 'Johann');
+    expect(userProfile.profile.nickname, 'Gerafftes');
+    expect(userProfile.profile.avatarInitial, 'G');
+    expect(userProfile.profile.avatarSystemImage, 'g.circle.fill');
     expect(userProfile.profile.formattedRating, '4,9');
     expect(userProfile.profile.completedJobs, 5);
     expect(userProfile.profile.skills, hasLength(3));
@@ -21,7 +24,7 @@ void main() {
     expect(userProfile.payments.payoutAccounts, hasLength(3));
     expect(
       userProfile.payments.payoutAccounts.first.title,
-      'Johann Eugen Mün...',
+      'Demo-PayPal-Konto',
     );
     expect(userProfile.payments.payoutAccounts[1].title, 'Visa •••• 4242');
   });

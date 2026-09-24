@@ -1,0 +1,7 @@
+# Copy this file to android/key.properties locally, or provide the equivalent
+# ANDROID_* environment variables in CI. Never commit the copied file or the
+# keystore itself.
+storeFile=release-keystore.jks
+storePassword=
+keyAlias=
+keyPassword=

@@ -70,6 +70,13 @@ post_install do |installer|
       lines << "#{include_line}\n"
     end
 
+    if %w[release profile].include?(config)
+      signing_include_line = '#include "../../../Flutter/ReleaseSigning.xcconfig"'
+      unless lines.any? { |line| line.chomp == signing_include_line }
+        lines << "#{signing_include_line}\n"
+      end
+    end
+
     # CocoaPods regenerates these xcconfigs; keep Xcode quiet for Flutter's quoted framework includes.
     sanitized_lines = []
     quoted_include_warning_written = false

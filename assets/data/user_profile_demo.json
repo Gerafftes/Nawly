@@ -1,7 +1,7 @@
 {
   "profile": {
-    "displayName": "Gerafftes",
-    "avatarInitial": "G",
+    "name": "Johann",
+    "nickname": "Gerafftes",
     "rating": 4.9,
     "completedJobs": 5,
     "skillInputHint": "Nachhilfe",
@@ -34,7 +34,7 @@
       {
         "id": "paypal",
         "type": "paypal",
-        "title": "Johann Eugen Mün...",
+        "title": "Demo-PayPal-Konto",
         "amount": "300,00 €",
         "statusText": "Bereit zur Auszahlung",
         "feeLabel": "Gebühr 0%",

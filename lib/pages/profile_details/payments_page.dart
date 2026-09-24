@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart' as intl;
 import '../../models/user_profile_models.dart';
+import '../../models/payment_selection.dart';
+import '../../services/payout_completion_flow.dart';
 import '../../services/sf_symbol_helper.dart'; // Pfad ggf. anpassen
 import '../../services/ui_scale.dart';
 import '../../widgets/adaptive_bottom_sheet.dart';
@@ -51,10 +53,8 @@ class _PaymentsPageState extends State<PaymentsPage>
     'assets/icons/checkmark.seal.fill.svg',
   };
 
-  int _selectedPayoutIndex = 0;
-  int _selectedPayoutSchedule = 0;
-  int? _standardPayoutIndex;
-  int? _selectedPaymentMethodIndex;
+  final PaymentSelection _selection = PaymentSelection();
+  final PayoutCompletionFlow _completionFlow = PayoutCompletionFlow();
   Timer? _paymentMethodPressTimer;
   late final List<_PaymentMethodData> _paymentMethods;
   late final List<UserPayoutAccountData> _payoutCards;
@@ -64,7 +64,7 @@ class _PaymentsPageState extends State<PaymentsPage>
   bool _showSwipeEndCap = false;
   bool _pendingHapticOnSnap = false;
   bool _openPayoutPageAfterSnap = false;
-  bool _isPayoutProcessing = false;
+  bool get _isPayoutProcessing => _completionFlow.isProcessing;
   double? _snapHapticTriggerOffset;
   bool _didTriggerSnapHaptic = false;
 
@@ -104,7 +104,7 @@ class _PaymentsPageState extends State<PaymentsPage>
     required double giftCardOffsetY,
   }) {
     final UserPayoutAccountData payoutAccount =
-        _payoutCards[_selectedPayoutIndex];
+        _payoutCards[_selection.payoutIndex];
     switch (payoutAccount.type) {
       case UserPayoutAccountType.paypal:
         return SizedBox(
@@ -241,6 +241,7 @@ class _PaymentsPageState extends State<PaymentsPage>
   @override
   void dispose() {
     _paymentMethodPressTimer?.cancel();
+    _completionFlow.dispose();
     _swipeChevronScaleController.dispose();
     _swipeSnapController.dispose();
     super.dispose();
@@ -266,17 +267,12 @@ class _PaymentsPageState extends State<PaymentsPage>
       return;
     }
 
-    setState(() {
-      _isPayoutProcessing = true;
-    });
-
-    await Future<void>.delayed(const Duration(seconds: 1));
-    if (!mounted) {
-      return;
-    }
+    final Future<bool> completion = _completionFlow.complete();
+    setState(() {});
+    final bool completed = await completion;
+    if (!mounted || !completed) return;
 
     setState(() {
-      _isPayoutProcessing = false;
       _payoutSwipeOffset = 0;
       _showSwipeEndCap = false;
     });
@@ -318,11 +314,11 @@ class _PaymentsPageState extends State<PaymentsPage>
     _paymentMethodPressTimer?.cancel();
     _paymentMethodPressTimer = Timer(const Duration(milliseconds: 450), () {
       if (!mounted) return;
-      if (_selectedPaymentMethodIndex != index) {
+      if (_selection.paymentMethodIndex != index) {
         HapticFeedback.selectionClick();
       }
       setState(() {
-        _selectedPaymentMethodIndex = index;
+        _selection.paymentMethodIndex = index;
       });
       _paymentMethodPressTimer = null;
     });
@@ -364,8 +360,7 @@ class _PaymentsPageState extends State<PaymentsPage>
     final ui = UiScale.of(context, designWidth: 402);
     double s(double value) => ui.s(value);
     final bool isDark = _resolveIsDark(context);
-    int draftSelectedPayoutSchedule = _selectedPayoutSchedule;
-    int? draftStandardPayoutIndex = _standardPayoutIndex;
+    final PayoutPreferencesDraft draft = _selection.editPreferences();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -391,14 +386,14 @@ class _PaymentsPageState extends State<PaymentsPage>
               0.0,
               MediaQuery.of(context).size.height * 0.6 - s(39),
             );
-            final String payoutName = _selectedPayoutIndex == 0
+            final String payoutName = _selection.payoutIndex == 0
                 ? 'PayPal'
-                : _selectedPayoutIndex == 1
+                : _selection.payoutIndex == 1
                 ? 'Visa'
                 : 'Gutschein';
-            final bool isAutoSelected = draftSelectedPayoutSchedule == 0;
+            final bool isAutoSelected = draft.schedule == 0;
             final bool isStandardSelected =
-                draftStandardPayoutIndex == _selectedPayoutIndex;
+                draft.standardPayoutIndex == _selection.payoutIndex;
             final String standardBlockTitleText = isAutoSelected
                 ? '$payoutName automatisch auszahlen'
                 : '$payoutName als Standart verwenden';
@@ -474,11 +469,11 @@ class _PaymentsPageState extends State<PaymentsPage>
                                         behavior: HitTestBehavior.opaque,
                                         onTap: () {
                                           if (!isAutoSelected &&
-                                              draftStandardPayoutIndex !=
+                                              draft.standardPayoutIndex !=
                                                   null) {
-                                            draftStandardPayoutIndex = null;
+                                            draft.standardPayoutIndex = null;
                                           }
-                                          draftSelectedPayoutSchedule = 0;
+                                          draft.schedule = 0;
                                           setModalState(() {});
                                         },
                                         child: SizedBox(
@@ -532,11 +527,11 @@ class _PaymentsPageState extends State<PaymentsPage>
                                         behavior: HitTestBehavior.opaque,
                                         onTap: () {
                                           if (isAutoSelected &&
-                                              draftStandardPayoutIndex !=
+                                              draft.standardPayoutIndex !=
                                                   null) {
-                                            draftStandardPayoutIndex = null;
+                                            draft.standardPayoutIndex = null;
                                           }
-                                          draftSelectedPayoutSchedule = 1;
+                                          draft.schedule = 1;
                                           setModalState(() {});
                                         },
                                         child: SizedBox(
@@ -632,9 +627,9 @@ class _PaymentsPageState extends State<PaymentsPage>
                               child: GestureDetector(
                                 behavior: HitTestBehavior.opaque,
                                 onTap: () {
-                                  draftStandardPayoutIndex = isStandardSelected
+                                  draft.standardPayoutIndex = isStandardSelected
                                       ? null
-                                      : _selectedPayoutIndex;
+                                      : _selection.payoutIndex;
                                   setModalState(() {});
                                 },
                                 child: AnimatedSwitcher(
@@ -747,9 +742,7 @@ class _PaymentsPageState extends State<PaymentsPage>
                         behavior: HitTestBehavior.opaque,
                         onTap: () {
                           setState(() {
-                            _selectedPayoutSchedule =
-                                draftSelectedPayoutSchedule;
-                            _standardPayoutIndex = draftStandardPayoutIndex;
+                            _selection.applyPreferences(draft);
                           });
                           Navigator.of(context).pop();
                         },
@@ -816,7 +809,7 @@ class _PaymentsPageState extends State<PaymentsPage>
     }
 
     final UserPayoutAccountData currentCard =
-        _payoutCards[_selectedPayoutIndex];
+        _payoutCards[_selection.payoutIndex];
     final bool isGiftCard = currentCard.type == UserPayoutAccountType.giftCard;
     final double statusRowHeight = s(33);
     final double cardContentBottomPadding = s(8);
@@ -824,11 +817,11 @@ class _PaymentsPageState extends State<PaymentsPage>
     final double payoutToggleBarHeight = s(39);
     final double payoutToggleButtonHeight = s(27);
     final double payoutToggleTapHeight = math.max(44, payoutToggleBarHeight);
-    final bool isManualSelected = _selectedPayoutSchedule == 1;
+    final bool isManualSelected = _selection.payoutSchedule == 1;
     const Color standardHighlightColor = Color(0xFF1EACFF);
-    final String? standardPayoutName = _standardPayoutIndex == 0
+    final String? standardPayoutName = _selection.standardPayoutIndex == 0
         ? 'PayPal'
-        : _standardPayoutIndex == 1
+        : _selection.standardPayoutIndex == 1
         ? 'Visa'
         : null;
     const String addPaymentLabel = 'Hinzufügen';
@@ -1010,7 +1003,7 @@ class _PaymentsPageState extends State<PaymentsPage>
 
                         final Widget paymentMethodHintPopover = IgnorePointer(
                           child: AnimatedOpacity(
-                            opacity: _selectedPaymentMethodIndex == null
+                            opacity: _selection.paymentMethodIndex == null
                                 ? 1
                                 : 0,
                             duration: const Duration(milliseconds: 180),
@@ -1206,10 +1199,12 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                   ),
                                                               borderWidth: s(3),
                                                               showBorder:
-                                                                  _selectedPaymentMethodIndex ==
+                                                                  _selection
+                                                                      .paymentMethodIndex ==
                                                                   index,
                                                               showCheckmark:
-                                                                  _selectedPaymentMethodIndex ==
+                                                                  _selection
+                                                                      .paymentMethodIndex ==
                                                                   index, // Zeigt Haken & Einschnitt
                                                               child: SFSymbolHelper.getIcon(
                                                                 iconPath:
@@ -1312,7 +1307,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                       children: [
                                                         _PayoutButton(
                                                           isSelected:
-                                                              _selectedPayoutIndex ==
+                                                              _selection
+                                                                  .payoutIndex ==
                                                               0,
                                                           label: 'PayPal',
                                                           width: buttonWidth,
@@ -1322,7 +1318,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               payoutToggleButtonHeight,
                                                           textColor:
                                                               isManualSelected &&
-                                                                  _standardPayoutIndex ==
+                                                                  _selection
+                                                                          .standardPayoutIndex ==
                                                                       0
                                                               ? standardHighlightColor
                                                               : const Color(
@@ -1330,7 +1327,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                 ),
                                                           onTap: () => setState(
                                                             () =>
-                                                                _selectedPayoutIndex =
+                                                                _selection
+                                                                        .payoutIndex =
                                                                     0,
                                                           ),
                                                         ),
@@ -1339,7 +1337,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                         ),
                                                         _PayoutButton(
                                                           isSelected:
-                                                              _selectedPayoutIndex ==
+                                                              _selection
+                                                                  .payoutIndex ==
                                                               1,
                                                           label: 'Visa',
                                                           width: buttonWidth,
@@ -1349,7 +1348,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               payoutToggleButtonHeight,
                                                           textColor:
                                                               isManualSelected &&
-                                                                  _standardPayoutIndex ==
+                                                                  _selection
+                                                                          .standardPayoutIndex ==
                                                                       1
                                                               ? standardHighlightColor
                                                               : const Color(
@@ -1357,7 +1357,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                                 ),
                                                           onTap: () => setState(
                                                             () =>
-                                                                _selectedPayoutIndex =
+                                                                _selection
+                                                                        .payoutIndex =
                                                                     1,
                                                           ),
                                                         ),
@@ -1366,7 +1367,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                         ),
                                                         _PayoutButton(
                                                           isSelected:
-                                                              _selectedPayoutIndex ==
+                                                              _selection
+                                                                  .payoutIndex ==
                                                               2,
                                                           label: 'Gutschein',
                                                           width: buttonWidth,
@@ -1380,7 +1382,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                               ),
                                                           onTap: () => setState(
                                                             () =>
-                                                                _selectedPayoutIndex =
+                                                                _selection
+                                                                        .payoutIndex =
                                                                     2,
                                                           ),
                                                         ),
@@ -1436,7 +1439,7 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                   ),
                                                 ),
                                               ),
-                                              if (_selectedPayoutIndex == 2)
+                                              if (_selection.payoutIndex == 2)
                                                 Positioned(
                                                   top: s(204 + 13),
                                                   left: s(17),
@@ -1593,9 +1596,11 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                             SizedBox(
                                                               height: s(3),
                                                             ),
-                                                            if (_selectedPayoutIndex ==
+                                                            if (_selection
+                                                                        .payoutIndex ==
                                                                     0 ||
-                                                                _selectedPayoutIndex ==
+                                                                _selection
+                                                                        .payoutIndex ==
                                                                     1)
                                                               Text(
                                                                 nextPayoutText,
@@ -1621,8 +1626,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                     ],
                                                   ),
                                                 ),
-                                              if (_selectedPayoutIndex == 0 ||
-                                                  _selectedPayoutIndex == 1)
+                                              if (_selection.payoutIndex == 0 ||
+                                                  _selection.payoutIndex == 1)
                                                 Positioned(
                                                   top: s(220),
                                                   right: s(10),
@@ -1656,7 +1661,7 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                 ),
                                               Container(
                                                 key: ValueKey<int>(
-                                                  _selectedPayoutIndex,
+                                                  _selection.payoutIndex,
                                                 ),
                                                 height: s(204),
                                                 width: double.infinity,
@@ -1855,7 +1860,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                           ),
                                         ),
                                         if (isManualSelected &&
-                                            _standardPayoutIndex != null) ...[
+                                            _selection.standardPayoutIndex !=
+                                                null) ...[
                                           SizedBox(height: s(26)),
                                           ProfileDetailSwipeBackGestureBlocker(
                                             child: SizedBox(
@@ -2331,7 +2337,8 @@ class _PaymentsPageState extends State<PaymentsPage>
                                             ),
                                           ),
                                           SizedBox(height: s(0)),
-                                        ] else if (_standardPayoutIndex ==
+                                        ] else if (_selection
+                                                .standardPayoutIndex ==
                                             null) ...[
                                           SizedBox(height: s(26)),
                                           ProfileDetailSwipeBackGestureBlocker(
@@ -2343,10 +2350,11 @@ class _PaymentsPageState extends State<PaymentsPage>
                                                 behavior:
                                                     HitTestBehavior.opaque,
                                                 onTap: () {
-                                                  if (_selectedPayoutIndex ==
+                                                  if (_selection.payoutIndex ==
                                                       2) {
                                                     setState(() {
-                                                      _selectedPayoutIndex = 0;
+                                                      _selection.payoutIndex =
+                                                          0;
                                                     });
                                                   }
                                                   _showFilterOverlay();

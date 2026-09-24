@@ -61,7 +61,10 @@ void main() {
 
         await _pumpScrollableScreen(
           tester,
-          const ActivityTabContent(jobCardColor: _cardColor),
+          ActivityTabContent(
+            jobCardColor: _cardColor,
+            userProfile: userProfile.profile,
+          ),
         );
         _expectNoLayoutError(tester, '${phone.key}: Aktivität');
 

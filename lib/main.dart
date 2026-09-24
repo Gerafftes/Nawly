@@ -4,7 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'data/user_profile_repository.dart';
+import 'bootstrap.dart';
+import 'config/app_environment.dart';
+import 'data/activity_demo_repository.dart';
+import 'data/activity_repository.dart';
+import 'data/job_map_region_repository.dart';
+import 'data/jobs_find_repository.dart';
+import 'models/activity_models.dart';
+import 'models/nickname.dart';
 import 'models/user_profile_models.dart';
 import 'pages/tabs/start/jobs_find_content.dart';
 import 'pages/tabs/create_tab.dart';
@@ -12,6 +19,7 @@ import 'pages/tabs/start/services_content.dart';
 import 'pages/tabs/activity_tab.dart';
 import 'pages/profile_details/profile_detail_page_utils.dart';
 import 'pages/profile_details/profile_detail_prewarm.dart';
+import 'pages/not_found_page.dart';
 import 'pages/tabs/profile_tab.dart';
 import 'pages/profile_details/verification_page.dart';
 import 'widgets/home_action_button.dart';
@@ -20,6 +28,11 @@ import 'liquid_glass/liquid_glass.dart';
 import 'services/shake_detector.dart';
 import 'services/sf_symbol_helper.dart';
 import 'services/ui_scale.dart';
+import 'services/activity_toast_coordinator.dart';
+import 'services/activity_toast_presenter.dart';
+
+// Repeat an unresolved activity reminder at most every two hours.
+const Duration _defaultActivityToastReminderInterval = Duration(hours: 2);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,15 +40,32 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  final UserProfileData userProfile = await const UserProfileDemoRepository()
-      .loadProfile();
-  runApp(MyApp(userProfile: userProfile));
+  final AppBootstrapData bootstrap = await loadAppBootstrap(
+    environment: AppEnvironment.fromEnvironment(),
+  );
+  runApp(
+    MyApp(
+      userProfile: bootstrap.userProfile,
+      activityRepository: bootstrap.repositories.activities,
+      jobsRepository: bootstrap.repositories.jobs,
+      mapRegionRepository: bootstrap.repositories.mapRegion,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key, required this.userProfile});
+  const MyApp({
+    super.key,
+    required this.userProfile,
+    this.activityRepository = const ActivityDemoRepository(),
+    this.jobsRepository = const JobsFindDemoRepository(),
+    this.mapRegionRepository = const JobMapRegionDemoRepository(),
+  });
 
   final UserProfileData userProfile;
+  final ActivityRepository activityRepository;
+  final JobsFindRepository jobsRepository;
+  final JobMapRegionRepository mapRegionRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -59,22 +89,44 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF007AFF)),
         useMaterial3: true,
       ),
-      home: HomeScreen(userProfile: userProfile),
+      home: HomeScreen(
+        userProfile: userProfile,
+        activityRepository: activityRepository,
+        jobsRepository: jobsRepository,
+        mapRegionRepository: mapRegionRepository,
+      ),
+      onUnknownRoute: (RouteSettings settings) => MaterialPageRoute<void>(
+        settings: settings,
+        builder: (BuildContext context) => const NotFoundPage(),
+      ),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.userProfile});
+  const HomeScreen({
+    super.key,
+    required this.userProfile,
+    this.activityRepository = const ActivityDemoRepository(),
+    this.jobsRepository = const JobsFindDemoRepository(),
+    this.mapRegionRepository = const JobMapRegionDemoRepository(),
+    this.activityToastPresenter = const MjnActivityToastPresenter(),
+    this.activityToastReminderInterval = _defaultActivityToastReminderInterval,
+  }) : assert(activityToastReminderInterval > Duration.zero);
 
   final UserProfileData userProfile;
+  final ActivityRepository activityRepository;
+  final JobsFindRepository jobsRepository;
+  final JobMapRegionRepository mapRegionRepository;
+  final ActivityToastPresenter activityToastPresenter;
+  final Duration activityToastReminderInterval;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   static const int _startTabIndex = 0;
   static const int _activityTabIndex = 1;
   static const int _profileTabIndex = 2;
@@ -104,6 +156,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isTopBarScrolledUnder = false;
   bool _showProfileDetailOpenSwipeStack = false;
   bool _openProfileDetailAfterSwipeAnimation = false;
+  String? _pendingActivityId;
   double _profileDetailOpenDragDistance = 0;
   double _profileDetailOpenSwipeProgress = 0;
   double _profileDetailBackgroundParallaxProgress = 0;
@@ -113,12 +166,33 @@ class _HomeScreenState extends State<HomeScreen>
   bool _hasQueuedProfileWarmupIconPrecache = false;
   final AppleLiquidSheetController _jobsFilterSheetController =
       AppleLiquidSheetController();
+  late final ActivityToastCoordinator _activityToastCoordinator;
+  bool _isStartFilterOpen = false;
+  late final Future<List<ActivitySectionData>> _activitySectionsFuture;
+  List<ActivitySectionData>? _loadedActivitySections;
   late final AnimationController _profileDetailOpenSwipeController;
   Animation<double>? _profileDetailOpenSwipeAnimation;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _activitySectionsFuture = _loadActivitySections();
+    _activityToastCoordinator = ActivityToastCoordinator(
+      presenter: widget.activityToastPresenter,
+      reminderInterval: widget.activityToastReminderInterval,
+      canShow: () =>
+          mounted && _bottomNavIndex == _startTabIndex && !_isStartFilterOpen,
+      placementOffset: () {
+        final ui = UiScale.of(context, designWidth: 402);
+        return -(ui.s(85) + ui.s(8));
+      },
+      scheduleFrame: (callback) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => callback());
+      },
+      onOpen: _openActivityFromStart,
+    );
+    unawaited(_activityToastCoordinator.initialize(_activitySectionsFuture));
     _profileDetailOpenSwipeController =
         AnimationController(
             vsync: this,
@@ -133,6 +207,74 @@ class _HomeScreenState extends State<HomeScreen>
         return;
       }
       _syncDelayedProfileWarmup();
+    });
+  }
+
+  Future<List<ActivitySectionData>> _loadActivitySections() async {
+    final List<ActivitySectionData> sections = await widget.activityRepository
+        .loadSections();
+    NicknameRules.validateUnique(<NicknameIdentity>[
+      NicknameIdentity(
+        name: widget.userProfile.profile.name,
+        nickname: widget.userProfile.profile.nickname,
+      ),
+      for (final ActivityContactData contact
+          in sections
+              .expand((ActivitySectionData section) => section.cards)
+              .map((ActivityCardData card) => card.contact)
+              .whereType<ActivityContactData>())
+        NicknameIdentity(name: contact.name, nickname: contact.nickname),
+    ]);
+    if (mounted) _loadedActivitySections = sections;
+    return sections;
+  }
+
+  Future<void> _pauseActivityToastForFilter() async {
+    _isStartFilterOpen = true;
+    await _activityToastCoordinator.dismiss(
+      restartReminder: false,
+      resumeOnStart: true,
+    );
+  }
+
+  void _resumeActivityToastAfterFilter() {
+    _isStartFilterOpen = false;
+    if (!mounted) return;
+    _activityToastCoordinator.scheduleIfReady();
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _openActivityFromStart(String activityId) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _pendingActivityId = activityId;
+      _resetProfileDetailOpenSwipeState();
+      _bottomNavIndex = _activityTabIndex;
+      _mainTabIndex = _activityTabIndex;
+      _isTopBarScrolledUnder = false;
+    });
+    _syncDelayedProfileWarmup();
+  }
+
+  void _clearPendingActivity() {
+    if (!mounted || _pendingActivityId == null) {
+      return;
+    }
+    setState(() {
+      _pendingActivityId = null;
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _activityToastCoordinator.scheduleIfReady();
+      }
     });
   }
 
@@ -157,15 +299,19 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _profileWarmupTimer?.cancel();
+    _activityToastCoordinator.dispose();
     _jobsFilterSheetController.dispose();
     _profileDetailOpenSwipeController.dispose();
+    unawaited(_shakeDetector?.dispose());
     _shakeDetector = null;
     super.dispose();
   }
 
   Future<void> _loadThemePreference() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       _themeMode = prefs.getString('theme_mode') ?? 'auto';
     });
@@ -537,6 +683,37 @@ class _HomeScreenState extends State<HomeScreen>
     });
   }
 
+  void _selectBottomNavigationTab(int index) {
+    HapticFeedback.selectionClick();
+    final bool isLeavingStartTab =
+        index != _startTabIndex && _bottomNavIndex == _startTabIndex;
+    if (isLeavingStartTab) {
+      unawaited(
+        _activityToastCoordinator.dismiss(
+          restartReminder: false,
+          resumeOnStart: true,
+        ),
+      );
+    }
+    setState(() {
+      _resetProfileDetailOpenSwipeState();
+      if (index != _activityTabIndex) {
+        _pendingActivityId = null;
+      }
+      if (index == _startTabIndex && _bottomNavIndex == _startTabIndex) {
+        selectedIndex = 0;
+      } else {
+        _bottomNavIndex = index;
+        _mainTabIndex = index;
+        _isTopBarScrolledUnder = false;
+      }
+    });
+    if (index == _startTabIndex) {
+      _activityToastCoordinator.scheduleIfReady();
+    }
+    _syncDelayedProfileWarmup();
+  }
+
   @override
   Widget build(BuildContext context) {
     final MediaQueryData rootMediaQuery = MediaQuery.of(context);
@@ -631,6 +808,10 @@ class _HomeScreenState extends State<HomeScreen>
           themeMode: _themeMode,
           buttonTextColor: buttonTextColor,
           sheetController: _jobsFilterSheetController,
+          onBeforeSheetPresented: _pauseActivityToastForFilter,
+          onSheetClosed: _resumeActivityToastAfterFilter,
+          jobsRepository: widget.jobsRepository,
+          mapRegionRepository: widget.mapRegionRepository,
         );
         break;
       case 1:
@@ -725,7 +906,7 @@ class _HomeScreenState extends State<HomeScreen>
                         index: 1,
                         iconPath:
                             'assets/icons/list.bullet.rectangle.portrait.fill.svg',
-                        label: 'Services',
+                        label: 'Services finden',
                       ),
                     ],
                   ),
@@ -765,7 +946,20 @@ class _HomeScreenState extends State<HomeScreen>
           );
         case _activityTabIndex:
           return withPullToRefresh(
-            ActivityTabContent(jobCardColor: jobCardColor),
+            ActivityTabContent(
+              jobCardColor: jobCardColor,
+              userProfile: widget.userProfile.profile,
+              activitySectionsFuture: _loadedActivitySections == null
+                  ? _activitySectionsFuture
+                  : Future<List<ActivitySectionData>>.value(
+                      _loadedActivitySections!,
+                    ),
+              initialActivityId: _pendingActivityId,
+              onInitialActivityHandled: _clearPendingActivity,
+              onBeforeSheetPresented: () async {
+                await _activityToastCoordinator.dismiss();
+              },
+            ),
             padding: EdgeInsets.only(
               top: topBarInset,
               bottom: s(92),
@@ -975,6 +1169,7 @@ class _HomeScreenState extends State<HomeScreen>
               switchOutCurve: Curves.easeOut,
               layoutBuilder: (currentChild, previousChildren) {
                 return Stack(
+                  fit: StackFit.expand,
                   alignment: Alignment.topCenter,
                   children: [...previousChildren, ?currentChild],
                 );
@@ -1110,45 +1305,57 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       bottomNavigationBar: SizedBox(
         height: s(85),
-        child: AppleLiquidTabBar(
-          currentIndex: _bottomNavIndex <= _createTabIndex
-              ? _bottomNavIndex
-              : _mainTabIndex,
-          height: s(85),
-          selectedTintColor: const Color(0xFF007AFF),
-          items: const <AppleLiquidTabItem>[
-            AppleLiquidTabItem(title: 'Start', systemImage: 'house.fill'),
-            AppleLiquidTabItem(
-              title: 'Aktivität',
-              systemImage: 'list.bullet.rectangle.portrait.fill',
+        child: Stack(
+          children: [
+            AppleLiquidTabBar(
+              currentIndex: _bottomNavIndex <= _createTabIndex
+                  ? _bottomNavIndex
+                  : _mainTabIndex,
+              height: s(85),
+              selectedTintColor: const Color(0xFF007AFF),
+              minimizeBehavior: AppleLiquidTabBarMinimizeBehavior.onScrollDown,
+              minimizeTrigger: const AppleLiquidTabBarMinimizeTrigger.pixels(
+                48,
+              ),
+              items: const <AppleLiquidTabItem>[
+                AppleLiquidTabItem(title: 'Start', systemImage: 'house.fill'),
+                AppleLiquidTabItem(
+                  title: 'Aktivität',
+                  systemImage: 'list.bullet.rectangle.portrait.fill',
+                ),
+                AppleLiquidTabItem(
+                  title: 'Profil',
+                  systemImage: 'person.fill',
+                  notificationDotColor: Color(0xFF007AFF),
+                  notificationBadgeValue: '3',
+                ),
+              ],
+              searchItem: const AppleLiquidTabItem(
+                title: 'Erstellen',
+                systemImage: 'plus',
+                isSearch: true,
+              ),
+              onChanged: _selectBottomNavigationTab,
             ),
-            AppleLiquidTabItem(
-              title: 'Profil',
-              systemImage: 'person.fill',
-              notificationDotColor: Color(0xFF007AFF),
-              notificationBadgeValue: '3',
-            ),
+            if (_bottomNavIndex == _notificationsTabIndex)
+              Positioned(
+                left: 0,
+                bottom: 0,
+                width: rootMediaQuery.size.width / 4,
+                height: s(85),
+                child: Semantics(
+                  label: 'Start',
+                  button: true,
+                  child: GestureDetector(
+                    key: const ValueKey<String>(
+                      'notifications-start-tab-tap-target',
+                    ),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => _selectBottomNavigationTab(_startTabIndex),
+                  ),
+                ),
+              ),
           ],
-          searchItem: const AppleLiquidTabItem(
-            title: 'Erstellen',
-            systemImage: 'plus',
-            isSearch: true,
-          ),
-          onChanged: (index) {
-            HapticFeedback.selectionClick();
-            setState(() {
-              _resetProfileDetailOpenSwipeState();
-              if (index == _startTabIndex &&
-                  _bottomNavIndex == _startTabIndex) {
-                selectedIndex = 0;
-              } else {
-                _bottomNavIndex = index;
-                _mainTabIndex = index;
-                _isTopBarScrolledUnder = false;
-              }
-            });
-            _syncDelayedProfileWarmup();
-          },
         ),
       ),
     );

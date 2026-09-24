@@ -1,0 +1,5 @@
+// Copy to ReleaseSigning.xcconfig locally or generate it from CI secrets.
+// Never commit the copied file, certificates, or provisioning profiles.
+IOS_DISTRIBUTION_SIGNING_IDENTITY = Apple Distribution: YOUR_CERTIFICATE_NAME (YOUR_TEAM_ID)
+IOS_DISTRIBUTION_TEAM_ID = YOUR_TEAM_ID
+IOS_DISTRIBUTION_PROVISIONING_PROFILE = YOUR_APP_STORE_PROFILE_NAME

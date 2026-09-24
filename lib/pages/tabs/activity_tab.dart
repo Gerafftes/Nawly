@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -7,81 +8,46 @@ import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
 import '../../data/activity_demo_repository.dart';
 import '../../data/activity_repository.dart';
 import '../../models/activity_models.dart';
+import '../../models/nickname.dart';
+import '../../models/user_profile_models.dart';
 import '../../services/sf_symbol_helper.dart';
 import '../../services/ui_scale.dart';
+import 'activity_sheet_content.dart';
 
 class ActivityTabContent extends StatefulWidget {
   const ActivityTabContent({
     super.key,
     required this.jobCardColor,
+    required this.userProfile,
     this.activityRepository = const ActivityDemoRepository(),
+    this.activitySectionsFuture,
+    this.initialActivityId,
+    this.onInitialActivityHandled,
+    this.onBeforeSheetPresented,
   });
 
   final Color jobCardColor;
+  final UserProfileSummaryData userProfile;
   final ActivityRepository activityRepository;
+  final Future<List<ActivitySectionData>>? activitySectionsFuture;
+  final String? initialActivityId;
+  final VoidCallback? onInitialActivityHandled;
+  final Future<void> Function()? onBeforeSheetPresented;
 
   @override
   State<ActivityTabContent> createState() => _ActivityTabContentState();
 }
 
-const String _runningSectionId = 'running';
-const String _createdSectionId = 'created';
-const String _completedForOthersSectionId = 'completedForOthers';
-const String _completedForYouSectionId = 'completedForYou';
-
-extension _ActivityCardSheetContent on ActivityCardData {
-  AppleLiquidSheetContent toSheetContent() {
-    return AppleLiquidSheetContent(
-      title: title,
-      doneSemanticLabel: 'Schließen',
-      leadingAction: const AppleLiquidSheetToolbarAction(
-        systemImage: 'xmark',
-        semanticLabel: 'Schließen',
-        foregroundColor: Color(0xFFF2F2F2),
-      ),
-      trailingAction: const AppleLiquidSheetToolbarAction(
-        systemImage: 'checkmark',
-        semanticLabel: 'Schließen',
-        foregroundColor: Color(0xFFFFFFFF),
-        backgroundColor: Color(0xFF007AFF),
-      ),
-      sections: <AppleLiquidSheetSection>[
-        AppleLiquidSheetSection(
-          title: 'Status',
-          rows: <AppleLiquidSheetRow>[
-            AppleLiquidSheetRow.value(title: 'Aktivität', value: title),
-            AppleLiquidSheetRow.value(title: 'Status', value: chip.label),
-            AppleLiquidSheetRow.value(
-              title: 'Fortschritt',
-              value: status.label,
-              systemImage: status.iconPath,
-            ),
-          ],
-        ),
-        AppleLiquidSheetSection(
-          title: 'Details',
-          rows: <AppleLiquidSheetRow>[
-            AppleLiquidSheetRow.value(
-              title: 'Termin',
-              value: metaText,
-              systemImage: 'calendar',
-            ),
-            const AppleLiquidSheetRow.text(
-              title: 'Platzhalter',
-              subtitle: 'Hier bauen wir gleich den Detailinhalt auf.',
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
 class _ActivityTabContentState extends State<ActivityTabContent> {
+  static const Duration _initialSheetOpenDelay = Duration(milliseconds: 300);
+  static const Duration _initialSheetRetryDelay = Duration(milliseconds: 180);
+  static const int _initialSheetMaxAttempts = 4;
+
   final AppleLiquidSheetController _activitySheetController =
       AppleLiquidSheetController();
 
   late final Future<List<ActivitySectionData>> _sectionsFuture;
+  String? _handledInitialActivityId;
 
   bool _isLaufendSelected = true;
   bool _isLaufendSectionExpanded = true;
@@ -92,7 +58,25 @@ class _ActivityTabContentState extends State<ActivityTabContent> {
   @override
   void initState() {
     super.initState();
-    _sectionsFuture = widget.activityRepository.loadSections();
+    _sectionsFuture = widget.activitySectionsFuture ?? _loadSections();
+  }
+
+  Future<List<ActivitySectionData>> _loadSections() async {
+    final List<ActivitySectionData> sections = await widget.activityRepository
+        .loadSections();
+    NicknameRules.validateUnique(<NicknameIdentity>[
+      NicknameIdentity(
+        name: widget.userProfile.name,
+        nickname: widget.userProfile.nickname,
+      ),
+      for (final ActivityContactData contact
+          in sections
+              .expand((ActivitySectionData section) => section.cards)
+              .map((ActivityCardData card) => card.contact)
+              .whereType<ActivityContactData>())
+        NicknameIdentity(name: contact.name, nickname: contact.nickname),
+    ]);
+    return sections;
   }
 
   @override
@@ -101,8 +85,78 @@ class _ActivityTabContentState extends State<ActivityTabContent> {
     super.dispose();
   }
 
-  Future<void> _showActivitySheet(AppleLiquidSheetContent content) async {
-    await _activitySheetController.showSheet(content: content);
+  Future<bool> _showActivitySheet(AppleLiquidSheetContent content) async {
+    await widget.onBeforeSheetPresented?.call();
+    if (!mounted) {
+      return false;
+    }
+    return _activitySheetController.showSheet(content: content);
+  }
+
+  void _handleActivitySheetAction(
+    ActivityCardData activity,
+    ActivitySheetAction action,
+  ) {
+    HapticFeedback.selectionClick();
+  }
+
+  void _maybeOpenInitialActivity(List<ActivitySectionData> sections) {
+    final String? activityId = widget.initialActivityId;
+    if (activityId == null || _handledInitialActivityId == activityId) {
+      return;
+    }
+
+    _handledInitialActivityId = activityId;
+    ActivityCardData? activity;
+    for (final ActivitySectionData section in sections) {
+      for (final ActivityCardData card in section.cards) {
+        if (card.id == activityId) {
+          activity = card;
+          break;
+        }
+      }
+      if (activity != null) {
+        break;
+      }
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+
+      final ActivityCardData? selectedActivity = activity;
+      if (selectedActivity == null) {
+        widget.onInitialActivityHandled?.call();
+        return;
+      }
+
+      unawaited(_openInitialActivitySheet(selectedActivity));
+    });
+  }
+
+  Future<void> _openInitialActivitySheet(ActivityCardData activity) async {
+    await Future<void>.delayed(_initialSheetOpenDelay);
+    final AppleLiquidSheetContent content = activity.toSheetContent(
+      userProfile: widget.userProfile,
+      onAction: _handleActivitySheetAction,
+    );
+
+    bool didShow = false;
+    for (
+      int attempt = 0;
+      attempt < _initialSheetMaxAttempts && mounted && !didShow;
+      attempt++
+    ) {
+      if (attempt > 0) {
+        await Future<void>.delayed(_initialSheetRetryDelay);
+      }
+      didShow = await _showActivitySheet(content);
+    }
+
+    if (mounted) {
+      widget.onInitialActivityHandled?.call();
+    }
   }
 
   @override
@@ -386,7 +440,14 @@ class _ActivityTabContentState extends State<ActivityTabContent> {
         ),
         height: cardHeight,
         onTap: () {
-          _showActivitySheet(data.toSheetContent());
+          unawaited(
+            _showActivitySheet(
+              data.toSheetContent(
+                userProfile: widget.userProfile,
+                onAction: _handleActivitySheetAction,
+              ),
+            ),
+          );
         },
         child: card,
       );
@@ -396,13 +457,6 @@ class _ActivityTabContentState extends State<ActivityTabContent> {
       required ActivitySectionData section,
       required bool isExpanded,
     }) {
-      assert(
-        section.cards.every(
-          (ActivityCardData card) =>
-              section.availableStates.contains(card.status),
-        ),
-      );
-
       final List<Widget> children = <Widget>[SizedBox(height: s(17))];
       for (int index = 0; index < section.cards.length; index += 1) {
         children.add(activityCard(section.cards[index]));
@@ -449,20 +503,20 @@ class _ActivityTabContentState extends State<ActivityTabContent> {
     }
 
     Widget sectionContent(List<ActivitySectionData> sections) {
-      final Map<String, ActivitySectionData> sectionById =
-          <String, ActivitySectionData>{
+      final Map<ActivitySectionType, ActivitySectionData> sectionByType =
+          <ActivitySectionType, ActivitySectionData>{
             for (final ActivitySectionData section in sections)
-              section.id: section,
+              section.type: section,
           };
 
       final ActivitySectionData? runningSection =
-          sectionById[_runningSectionId];
+          sectionByType[ActivitySectionType.running];
       final ActivitySectionData? createdSection =
-          sectionById[_createdSectionId];
+          sectionByType[ActivitySectionType.created];
       final ActivitySectionData? completedForOthersSection =
-          sectionById[_completedForOthersSectionId];
+          sectionByType[ActivitySectionType.completedForOthers];
       final ActivitySectionData? completedForYouSection =
-          sectionById[_completedForYouSectionId];
+          sectionByType[ActivitySectionType.completedForYou];
 
       if (runningSection == null ||
           createdSection == null ||
@@ -581,6 +635,7 @@ class _ActivityTabContentState extends State<ActivityTabContent> {
               return SizedBox(height: s(26));
             }
 
+            _maybeOpenInitialActivity(sections);
             return sectionContent(sections);
           },
         ),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 
 import '../models/activity_models.dart';
+import '../models/nickname.dart';
 import 'activity_repository.dart';
 
 class ActivityDemoRepository extends ActivityRepository {
@@ -22,9 +23,35 @@ class ActivityDemoRepository extends ActivityRepository {
     }
 
     final List<Object?> rawSections = decoded['sections'] as List<Object?>;
-    return rawSections
+    final List<ActivitySectionData> sections = rawSections
         .cast<Map<String, Object?>>()
         .map(ActivitySectionData.fromJson)
         .toList(growable: false);
+    final Set<ActivitySectionType> sectionTypes = sections
+        .map((ActivitySectionData section) => section.type)
+        .toSet();
+
+    if (sectionTypes.length != sections.length ||
+        sectionTypes.length != ActivitySectionType.values.length ||
+        !sectionTypes.containsAll(ActivitySectionType.values)) {
+      throw const FormatException(
+        'Activity demo data must contain every section exactly once',
+      );
+    }
+
+    NicknameRules.validateUnique(
+      sections
+          .expand((ActivitySectionData section) => section.cards)
+          .map((ActivityCardData card) => card.contact)
+          .whereType<ActivityContactData>()
+          .map(
+            (ActivityContactData contact) => NicknameIdentity(
+              name: contact.name,
+              nickname: contact.nickname,
+            ),
+          ),
+    );
+
+    return sections;
   }
 }

@@ -212,7 +212,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
                                     fit: BoxFit.scaleDown,
                                     alignment: Alignment.centerLeft,
                                     child: Text(
-                                      widget.userProfile.profile.displayName,
+                                      widget.userProfile.profile.nickname,
                                       maxLines: 1,
                                       style: TextStyle(
                                         color: widget.textColor,

@@ -2,55 +2,121 @@
   "sections": [
     {
       "id": "running",
-      "title": "Laufend",
-      "availableStates": [
-        "agreementPending",
-        "confirmed",
-        "inProgress",
-        "completionReported"
-      ],
       "cards": [
         {
           "id": "running-dog-walking",
           "title": "Gassi gehen",
           "chip": "jobAccepted",
-          "metaText": "Heute, 14:00 · 15€",
+          "scheduleText": "Heute, 14:00",
+          "compensationText": "15 €",
+          "locationText": "1,2 km entfernt",
+          "description": "Eine Runde von ungefähr 45 Minuten mit einem Labrador.",
           "status": "agreementPending",
-          "iconPath": "assets/icons/briefcase.fill.svg"
+          "statusHistory": [],
+          "iconPath": "assets/icons/briefcase.fill.svg",
+          "contact": {
+            "name": "Mara König",
+            "nickname": "MaraK",
+            "role": "Auftraggeberin",
+            "summary": "Verifiziert · ★ 4,9"
+          }
         },
         {
           "id": "running-tutoring-booked",
           "title": "Nachhilfe",
           "chip": "serviceBooked",
-          "metaText": "Heute, 15:00 – 17:00 · 40€",
+          "scheduleText": "Heute, 15:00 – 17:00",
+          "compensationText": "40 €",
+          "locationText": "Bei dir zu Hause",
+          "description": "Vorbereitung auf die nächste Mathematik-Klausur.",
           "status": "confirmed",
-          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+          "statusHistory": [
+            {
+              "status": "agreementPending",
+              "timestampText": "Heute, 09:12"
+            }
+          ],
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg",
+          "contact": {
+            "name": "Elias Hartmann",
+            "nickname": "EliasH",
+            "role": "Anbieter",
+            "summary": "Verifiziert · ★ 4,8"
+          }
         },
         {
           "id": "running-garden-service-with-you",
           "title": "Gartenarbeit",
           "chip": "serviceBookedWithYou",
-          "metaText": "Morgen, 10:00 · 25€",
+          "scheduleText": "Morgen, 10:00",
+          "compensationText": "25 €",
+          "locationText": "2,4 km entfernt",
+          "description": "Hecke schneiden und den Grünschnitt zusammenstellen.",
           "status": "inProgress",
-          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+          "statusHistory": [
+            {
+              "status": "agreementPending",
+              "timestampText": "Gestern, 18:40"
+            },
+            {
+              "status": "confirmed",
+              "timestampText": "Heute, 08:15"
+            }
+          ],
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg",
+          "contact": {
+            "name": "Nora Voss",
+            "nickname": "NoraV",
+            "role": "Kundin",
+            "summary": "Verifiziert · ★ 4,7"
+          }
+        },
+        {
+          "id": "running-window-cleaning-completed",
+          "title": "Fenster putzen",
+          "chip": "serviceBooked",
+          "scheduleText": "Heute, 11:00",
+          "compensationText": "30 €",
+          "locationText": "Bei dir zu Hause",
+          "description": "Vier Fenster und die Balkontür wurden gereinigt.",
+          "status": "completionReported",
+          "statusHistory": [
+            {
+              "status": "agreementPending",
+              "timestampText": "Gestern, 16:25"
+            },
+            {
+              "status": "confirmed",
+              "timestampText": "Gestern, 16:41"
+            },
+            {
+              "status": "inProgress",
+              "timestampText": "Heute, 11:03"
+            }
+          ],
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg",
+          "contact": {
+            "name": "Aylin Demir",
+            "nickname": "AylinD",
+            "role": "Anbieterin",
+            "summary": "Verifiziert · ★ 4,9"
+          }
         }
       ]
     },
     {
       "id": "created",
-      "title": "Von dir erstellt",
-      "availableStates": [
-        "helperNeeded",
-        "inProgress",
-        "completionConfirmation"
-      ],
       "cards": [
         {
           "id": "created-moving-help",
           "title": "Umzugshilfe",
           "chip": "jobCreated",
-          "metaText": "Morgen, 09:00 · 60€",
+          "scheduleText": "Morgen, 09:00",
+          "compensationText": "60 €",
+          "locationText": "Altstadt, 3. OG",
+          "description": "Kartons und kleinere Möbel in einen Transporter tragen.",
           "status": "helperNeeded",
+          "statusHistory": [],
           "iconPath": "assets/icons/briefcase.fill.svg",
           "showsVisibilityBadge": true
         },
@@ -58,56 +124,187 @@
           "id": "created-math-service",
           "title": "Mathe Nachhilfe",
           "chip": "serviceOffered",
-          "metaText": "Wöchentlich · 22€/h",
+          "scheduleText": "Jeden Mittwoch, 15:00 – 17:00",
+          "compensationText": "22 €/h",
+          "locationText": "Im Umkreis von 5 km",
+          "description": "Nachhilfe in Mathematik für die Klassen 7 bis 10.",
           "status": "inProgress",
+          "statusHistory": [],
           "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg",
           "showsVisibilityBadge": true
+        },
+        {
+          "id": "created-shelf-completion",
+          "title": "Regal aufbauen",
+          "chip": "jobCreated",
+          "scheduleText": "Heute, 13:00",
+          "compensationText": "45 €",
+          "locationText": "Bei dir zu Hause",
+          "description": "Ein Wandregal aufbauen und sicher befestigen.",
+          "status": "completionConfirmation",
+          "statusHistory": [
+            {
+              "status": "helperNeeded",
+              "timestampText": "Gestern, 12:10"
+            },
+            {
+              "status": "inProgress",
+              "timestampText": "Heute, 13:05"
+            }
+          ],
+          "iconPath": "assets/icons/briefcase.fill.svg",
+          "contact": {
+            "name": "Tobias Rehm",
+            "nickname": "TobiR",
+            "role": "Helfer",
+            "summary": "Verifiziert · ★ 4,8"
+          }
         }
       ]
     },
     {
       "id": "completedForOthers",
-      "title": "Für andere erledigt",
-      "availableStates": ["completed"],
       "cards": [
         {
           "id": "completed-others-carry-groceries",
           "title": "Einkäufe tragen",
           "chip": "jobCompletedByYou",
-          "metaText": "Gestern, 18:00 · 20€",
+          "scheduleText": "Gestern, 18:00",
+          "compensationText": "20 €",
+          "locationText": "0,9 km entfernt",
+          "description": "Getränke und Einkäufe bis in die Wohnung getragen.",
           "status": "completed",
-          "iconPath": "assets/icons/briefcase.fill.svg"
+          "statusHistory": [
+            {
+              "status": "agreementPending",
+              "timestampText": "Gestern, 12:34"
+            },
+            {
+              "status": "confirmed",
+              "timestampText": "Gestern, 12:51"
+            },
+            {
+              "status": "inProgress",
+              "timestampText": "Gestern, 18:02"
+            },
+            {
+              "status": "completionReported",
+              "timestampText": "Gestern, 18:47"
+            }
+          ],
+          "iconPath": "assets/icons/briefcase.fill.svg",
+          "contact": {
+            "name": "Helene Maurer",
+            "nickname": "HeleneM",
+            "role": "Auftraggeberin",
+            "summary": "Verifiziert · ★ 5,0"
+          }
         },
         {
           "id": "completed-others-dog-sitting",
           "title": "Hundesitting",
           "chip": "serviceBookedWithYou",
-          "metaText": "Mo, 16:00 · 35€",
+          "scheduleText": "Montag, 16:00",
+          "compensationText": "35 €",
+          "locationText": "1,7 km entfernt",
+          "description": "Zwei Stunden Betreuung inklusive Spaziergang.",
           "status": "completed",
-          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+          "statusHistory": [
+            {
+              "status": "agreementPending",
+              "timestampText": "Sonntag, 10:18"
+            },
+            {
+              "status": "confirmed",
+              "timestampText": "Sonntag, 10:26"
+            },
+            {
+              "status": "inProgress",
+              "timestampText": "Montag, 16:04"
+            },
+            {
+              "status": "completionReported",
+              "timestampText": "Montag, 18:09"
+            }
+          ],
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg",
+          "contact": {
+            "name": "Fabian Lenz",
+            "nickname": "FabianL",
+            "role": "Kunde",
+            "summary": "Verifiziert · ★ 4,6"
+          }
         }
       ]
     },
     {
       "id": "completedForYou",
-      "title": "Für dich erledigt",
-      "availableStates": ["completed"],
       "cards": [
         {
           "id": "completed-you-shelf",
           "title": "Regal aufbauen",
           "chip": "jobCreated",
-          "metaText": "Dienstag, 13:00 · 45€",
+          "scheduleText": "Dienstag, 13:00",
+          "compensationText": "45 €",
+          "locationText": "Bei dir zu Hause",
+          "description": "Das Wandregal wurde aufgebaut und befestigt.",
           "status": "completed",
-          "iconPath": "assets/icons/briefcase.fill.svg"
+          "statusHistory": [
+            {
+              "status": "helperNeeded",
+              "timestampText": "Montag, 09:20"
+            },
+            {
+              "status": "inProgress",
+              "timestampText": "Dienstag, 13:05"
+            },
+            {
+              "status": "completionConfirmation",
+              "timestampText": "Dienstag, 14:22"
+            }
+          ],
+          "iconPath": "assets/icons/briefcase.fill.svg",
+          "contact": {
+            "name": "Tobias Rehm",
+            "nickname": "TobiR",
+            "role": "Helfer",
+            "summary": "Verifiziert · ★ 4,8"
+          }
         },
         {
           "id": "completed-you-window-cleaning",
           "title": "Fenster putzen",
           "chip": "serviceBooked",
-          "metaText": "Mittwoch, 11:00 · 30€",
+          "scheduleText": "Mittwoch, 11:00",
+          "compensationText": "30 €",
+          "locationText": "Bei dir zu Hause",
+          "description": "Vier Fenster und die Balkontür wurden gereinigt.",
           "status": "completed",
-          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg"
+          "statusHistory": [
+            {
+              "status": "agreementPending",
+              "timestampText": "Montag, 09:30"
+            },
+            {
+              "status": "confirmed",
+              "timestampText": "Montag, 09:42"
+            },
+            {
+              "status": "inProgress",
+              "timestampText": "Mittwoch, 11:00"
+            },
+            {
+              "status": "completionReported",
+              "timestampText": "Mittwoch, 12:15"
+            }
+          ],
+          "iconPath": "assets/icons/list.bullet.rectangle.portrait.fill.svg",
+          "contact": {
+            "name": "Aylin Demir",
+            "nickname": "AylinD",
+            "role": "Anbieterin",
+            "summary": "Verifiziert · ★ 4,9"
+          }
         }
       ]
     }

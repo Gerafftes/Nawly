@@ -6,7 +6,11 @@
       "time": "Heute, 14:00",
       "price": "10 €",
       "distance": "1,2km",
-      "showVerified": true
+      "showVerified": true,
+      "approximateLocation": {
+        "latitude": 52.4992,
+        "longitude": 13.4076
+      }
     },
     {
       "id": "find-grocery-help",
@@ -14,7 +18,11 @@
       "time": "Heute, 15:00",
       "price": "12 €",
       "distance": "0,8km",
-      "showVerified": true
+      "showVerified": true,
+      "approximateLocation": {
+        "latitude": 52.5155,
+        "longitude": 13.4541
+      }
     },
     {
       "id": "find-package-pickup",
@@ -22,7 +30,11 @@
       "time": "Heute, 16:30",
       "price": "8 €",
       "distance": "2,1km",
-      "showVerified": true
+      "showVerified": true,
+      "approximateLocation": {
+        "latitude": 52.4771,
+        "longitude": 13.4378
+      }
     }
   ]
 }

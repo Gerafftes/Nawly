@@ -2,6 +2,10 @@ name: nawly
 description: "kommt noch :)"
 publish_to: 'none'
 
+platforms:
+  android:
+  ios:
+
 version: 1.0.0+1
 
 environment:
@@ -16,14 +20,20 @@ dependencies:
   shared_preferences: ^2.5.4
   sensors_plus: ^7.0.0
   flutter_native_splash: ^2.4.7
-  mjn_liquid_ui: ^0.2.23
+  mjn_liquid_ui: ^0.2.33
   intl: ^0.20.2
   dropdown_button2: ^2.3.9
+  supabase_flutter: 2.17.2
+  flutter_map: ^8.3.2
+  latlong2: ^0.10.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  http: ^1.6.0
+  shared_preferences_platform_interface: ^2.4.1
 
 flutter:
   uses-material-design: true
@@ -35,6 +45,7 @@ flutter:
 flutter_native_splash:
   android: true
   ios: true
+  # Keep native splash generation from recreating a removed web target.
   web: false
   color: "#0D0D0D"
   image: "assets/icons/logo.png"

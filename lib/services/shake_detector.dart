@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:sensors_plus/sensors_plus.dart';
 
 class ShakeDetector {
@@ -10,6 +12,9 @@ class ShakeDetector {
   final double shakeThreshold;
   final int shakeCountTimeReset;
   final int minTimeBetweenShakes;
+  final Stream<AccelerometerEvent>? _events;
+  StreamSubscription<AccelerometerEvent>? _subscription;
+  bool _disposed = false;
 
   DateTime? _lastShakeTime;
   DateTime? _lastUpdateTime;
@@ -24,15 +29,25 @@ class ShakeDetector {
     this.shakeThreshold = _shakeThreshold,
     this.shakeCountTimeReset = _shakeCountTimeReset,
     this.minTimeBetweenShakes = _minTimeBetweenShakes,
-  });
+    Stream<AccelerometerEvent>? events,
+  }) : _events = events;
 
   void startListening() {
-    accelerometerEventStream().listen((AccelerometerEvent event) {
-      _processAccelerometerEvent(event);
-    });
+    if (_disposed || _subscription != null) return;
+    _subscription = (_events ?? accelerometerEventStream()).listen(
+      _processAccelerometerEvent,
+    );
+  }
+
+  Future<void> dispose() async {
+    _disposed = true;
+    final StreamSubscription<AccelerometerEvent>? subscription = _subscription;
+    _subscription = null;
+    await subscription?.cancel();
   }
 
   void _processAccelerometerEvent(AccelerometerEvent event) {
+    if (_disposed) return;
     final DateTime now = DateTime.now();
     final double x = event.x;
     final double y = event.y;

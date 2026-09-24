@@ -1,0 +1,98 @@
+name: Release security gates
+
+on:
+  pull_request:
+    paths:
+      - android/**
+      - ios/**
+      - windows/**
+      - lib/**
+      - tool/verify_release_signing.sh
+      - .github/workflows/release-security-gates.yml
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Git tag whose mobile artifacts should be audited
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release-configuration:
+    name: Check release signing configuration
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Reject development signing in release configuration
+        run: bash tool/verify_release_signing.sh --static
+
+  published-artifacts:
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    name: Verify published mobile artifact signatures
+    runs-on: macos-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+      ANDROID_EXPECTED_CERT_SHA256: ${{ secrets.ANDROID_EXPECTED_CERT_SHA256 }}
+      IOS_EXPECTED_SIGNING_IDENTITY: ${{ secrets.IOS_EXPECTED_SIGNING_IDENTITY }}
+      IOS_EXPECTED_PROFILE_UUID: ${{ secrets.IOS_EXPECTED_PROFILE_UUID }}
+      IOS_EXPECTED_TEAM_ID: ${{ secrets.IOS_EXPECTED_TEAM_ID }}
+      ANDROID_SDK_ROOT: /Users/runner/Library/Android/sdk
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Java for Android certificate inspection
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Resolve protected iOS Profile/Release settings
+        env:
+          IOS_EXPECTED_SIGNING_IDENTITY: ${{ secrets.IOS_EXPECTED_SIGNING_IDENTITY }}
+          IOS_EXPECTED_PROFILE_UUID: ${{ secrets.IOS_EXPECTED_PROFILE_UUID }}
+          IOS_EXPECTED_TEAM_ID: ${{ secrets.IOS_EXPECTED_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          signing_config='ios/Flutter/ReleaseSigning.xcconfig'
+          cleanup() {
+            rm -f "$signing_config"
+          }
+          trap cleanup EXIT
+          {
+            printf '%s\n' "IOS_DISTRIBUTION_SIGNING_IDENTITY = $IOS_EXPECTED_SIGNING_IDENTITY"
+            printf '%s\n' "IOS_DISTRIBUTION_TEAM_ID = $IOS_EXPECTED_TEAM_ID"
+            printf '%s\n' "IOS_DISTRIBUTION_PROVISIONING_PROFILE = $IOS_EXPECTED_PROFILE_UUID"
+          } > "$signing_config"
+          bash tool/verify_release_signing.sh --config
+      - name: Download mobile artifacts from the release
+        run: |
+          set -euo pipefail
+          mkdir -p release-artifacts
+          gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.apk' \
+            --pattern '*.aab' \
+            --pattern '*.ipa' \
+            --dir release-artifacts
+      - name: Verify approved certificates and profiles
+        run: |
+          set -euo pipefail
+          verifier_args=()
+          while IFS= read -r artifact; do
+            verifier_args+=(--android-artifact "$artifact")
+          done < <(find release-artifacts -type f \( -name '*.apk' -o -name '*.aab' \) -print)
+
+          ios_artifact="$(find release-artifacts -type f -name '*.ipa' -print -quit)"
+          if ((${#verifier_args[@]} == 0)) && [[ -z "$ios_artifact" ]]; then
+            echo 'No APK, AAB, or IPA was attached to the release.' >&2
+            exit 1
+          fi
+          if [[ -n "$ios_artifact" ]]; then
+            verifier_args+=(--ios-artifact "$ios_artifact")
+          fi
+          bash tool/verify_release_signing.sh "${verifier_args[@]}"
