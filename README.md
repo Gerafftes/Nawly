@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="docs/assets/readme/test1-icon-preview.svg" width="160" alt="Nawly Test1 Icon">
+  <img src="docs/assets/readme/test1-icon-light.png" width="160" alt="Nawly App-Icon – Hell">
+  <img src="docs/assets/readme/test1-icon-dark.png" width="160" alt="Nawly App-Icon – Dunkel">
+  <img src="docs/assets/readme/test1-icon-clear.png" width="160" alt="Nawly App-Icon – Transparent">
 </p>
 
 <h1 align="center">Nawly</h1>
@@ -140,7 +142,7 @@ verteilen.
 - `shared_preferences` speichert lokale Einstellungen wie das Theme und den Zustand von Aktivitäts-Erinnerungen.
 - `mjn_liquid_ui` liefert die Apple-inspirierten Tab-Bar-, Sheet- und Toast-Bausteine; ergänzende UI- und Skalierungslogik liegt im Projekt selbst.
 - Die erste Demo-Region nutzt die für die mobile Darstellung lokal vereinfachte amtliche [ALKIS Berlin Landesgrenze](https://daten.berlin.de/datensaetze/alkis-berlin-landesgrenze-wfs-07b1347b) unter der Datenlizenz Deutschland – Zero – Version 2.0.
-- Das iOS-App-Icon ist als [Test1_Icon.icon](Icon/Test1_Icon.icon/) eingebunden. Die README-Vorschau liegt unter [docs/assets/readme/test1-icon-preview.svg](docs/assets/readme/test1-icon-preview.svg).
+- Das iOS-App-Icon ist als [Test1_Icon.icon](Icon/Test1_Icon.icon/) eingebunden. Die README-Vorschauen für Hell, Dunkel und Transparent liegen unter [docs/assets/readme/](docs/assets/readme/).
 
 ## Status
 
