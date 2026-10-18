@@ -20,10 +20,14 @@ permissions:
 jobs:
   release-configuration:
     name: Check release signing configuration
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+      - name: Install signing verifier prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ripgrep
       - name: Reject development signing in release configuration
         run: bash tool/verify_release_signing.sh --static
 
