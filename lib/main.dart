@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:mjn_liquid_ui/mjn_liquid_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'bootstrap.dart';
+import 'app_startup.dart';
 import 'config/app_environment.dart';
 import 'data/activity_demo_repository.dart';
 import 'data/activity_repository.dart';
@@ -34,8 +35,12 @@ import 'services/activity_toast_presenter.dart';
 // Repeat an unresolved activity reminder at most every two hours.
 const Duration _defaultActivityToastReminderInterval = Duration(hours: 2);
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AppStartup(load: _loadApp));
+}
+
+Future<Widget> _loadApp() async {
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -43,13 +48,11 @@ Future<void> main() async {
   final AppBootstrapData bootstrap = await loadAppBootstrap(
     environment: AppEnvironment.fromEnvironment(),
   );
-  runApp(
-    MyApp(
-      userProfile: bootstrap.userProfile,
-      activityRepository: bootstrap.repositories.activities,
-      jobsRepository: bootstrap.repositories.jobs,
-      mapRegionRepository: bootstrap.repositories.mapRegion,
-    ),
+  return MyApp(
+    userProfile: bootstrap.userProfile,
+    activityRepository: bootstrap.repositories.activities,
+    jobsRepository: bootstrap.repositories.jobs,
+    mapRegionRepository: bootstrap.repositories.mapRegion,
   );
 }
 

@@ -2,13 +2,9 @@ name: Release security gates
 
 on:
   pull_request:
-    paths:
-      - android/**
-      - ios/**
-      - windows/**
-      - lib/**
-      - tool/verify_release_signing.sh
-      - .github/workflows/release-security-gates.yml
+  push:
+    branches: [main]
+  merge_group:
   release:
     types: [published]
   workflow_dispatch:

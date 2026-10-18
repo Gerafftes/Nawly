@@ -4,8 +4,7 @@ import 'config/app_environment.dart';
 import 'data/app_repositories.dart';
 import 'models/user_profile_models.dart';
 
-/// Data needed before the first application frame. Platform setup and runApp
-/// stay in main; loading failures deliberately propagate to the caller.
+/// Data loaded by the startup surface. Failures propagate to its retry state.
 class AppBootstrapData {
   const AppBootstrapData({
     required this.repositories,
@@ -33,9 +32,20 @@ Future<AppBootstrapData> loadAppBootstrap({
 Future<AppRepositories> _initializeSupabaseRepositories(
   AppEnvironment environment,
 ) async {
-  await Supabase.initialize(
+  // The SDK publishes its singleton before asynchronous auth initialization
+  // finishes. A retry must dispose that partial instance rather than let the
+  // SDK skip initialization. Startup serializes these calls before showing MyApp.
+  Supabase? previous;
+  try {
+    previous = Supabase.instance;
+  } on AssertionError {
+    // The SDK has no initialized instance yet (its getter asserts in debug).
+  }
+  if (previous?.isInitialized ?? false) await previous!.dispose();
+  final supabase = await Supabase.initialize(
     url: environment.supabaseUrl,
     publishableKey: environment.supabasePublishableKey,
+    debug: false,
   );
-  return AppRepositories.supabase(Supabase.instance.client);
+  return AppRepositories.supabase(supabase.client);
 }

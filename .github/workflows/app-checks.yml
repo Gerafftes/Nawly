@@ -1,37 +1,24 @@
 name: App checks
 
+# Always create required checks, including for platform/backend/workflow changes.
 on:
   pull_request:
-    paths:
-      - 'lib/**'
-      - 'test/**'
-      - 'assets/**'
-      - 'pubspec.yaml'
-      - 'pubspec.lock'
-      - 'analysis_options.yaml'
-      - '.github/workflows/app-checks.yml'
   push:
     branches: [main]
-    paths:
-      - 'lib/**'
-      - 'test/**'
-      - 'assets/**'
-      - 'pubspec.yaml'
-      - 'pubspec.lock'
-      - 'analysis_options.yaml'
-      - '.github/workflows/app-checks.yml'
+  merge_group:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: app-checks-${{ github.ref }}
+  group: app-checks-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   flutter:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2.23.0
@@ -42,3 +29,22 @@ jobs:
       - run: flutter pub get --enforce-lockfile
       - run: flutter analyze --no-pub
       - run: flutter test --no-pub
+
+  dependencies:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install verified OSV-Scanner 2.7.0
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          base=https://github.com/google/osv-scanner/releases/download/v2.7.0
+          curl --fail --silent --show-error --location "$base/osv-scanner_linux_amd64" -o osv-scanner_linux_amd64
+          curl --fail --silent --show-error --location "$base/osv-scanner_SHA256SUMS" -o osv-scanner_SHA256SUMS
+          sha256sum --check --ignore-missing osv-scanner_SHA256SUMS
+          chmod +x osv-scanner_linux_amd64
+      - name: Scan resolved dependencies (fail on findings or scanner errors)
+        run: |
+          "${{ runner.temp }}/osv-scanner_linux_amd64" scan source --no-resolve \
+            --lockfile=pubspec.lock

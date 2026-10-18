@@ -4,6 +4,8 @@ import 'package:nawly/config/app_environment.dart';
 import 'package:nawly/data/app_repositories.dart';
 import 'package:nawly/data/user_profile_repository.dart';
 import 'package:nawly/models/user_profile_models.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +84,56 @@ void main() {
       throwsA(same(failure)),
     );
   });
+
+  test(
+    'retry replaces an SDK singleton left by failed auth initialization',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final environment = AppEnvironment.fromValues(
+        dataSource: 'supabase',
+        supabaseUrl: 'https://test.invalid',
+        supabasePublishableKey: 'test-key',
+      );
+      await expectLater(
+        Supabase.initialize(
+          url: environment.supabaseUrl,
+          publishableKey: environment.supabasePublishableKey,
+          debug: false,
+          authOptions: const FlutterAuthClientOptions(
+            localStorage: _FailingStorage(),
+            detectSessionInUri: false,
+          ),
+        ),
+        throwsStateError,
+      );
+      final partialClient = Supabase.instance.client;
+      try {
+        // No session is seeded. A clean initialization must reach the private
+        // profile's auth guard rather than reuse the broken auth instance.
+        await expectLater(
+          loadAppBootstrap(environment: environment),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              contains('authentication is required'),
+            ),
+          ),
+        );
+        expect(Supabase.instance.client, isNot(same(partialClient)));
+      } finally {
+        await Supabase.instance.dispose();
+      }
+    },
+  );
+}
+
+class _FailingStorage extends EmptyLocalStorage {
+  const _FailingStorage();
+
+  @override
+  Future<void> initialize() async =>
+      throw StateError('synthetic storage failure');
 }
 
 class _FailingProfile extends UserProfileRepository {
